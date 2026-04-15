@@ -1,0 +1,12 @@
+node_modules
+.next
+dist
+.env.local
+
+# API uploads (dev)
+apps/api/uploads
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

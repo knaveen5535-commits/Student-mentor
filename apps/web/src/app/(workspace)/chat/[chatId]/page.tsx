@@ -25,30 +25,22 @@ export default function ChatThreadPage() {
     return (
       <div
         style={{
+          flex: 1,
           display: 'flex',
-          gap: 16,
-          height: '100%',
-          alignItems: 'flex-start',
-          animation: 'fadeIn 0.3s ease-out',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 400,
+          background: 'rgba(22, 24, 31, 0.4)',
+          backdropFilter: 'blur(40px) brightness(1.05)',
+          WebkitBackdropFilter: 'blur(40px) brightness(1.05)',
+          borderRadius: 16,
+          border: '1px solid rgba(255,255,255,0.15)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.2)',
+          color: 'rgba(240,242,255,0.4)',
+          fontSize: 15,
         }}
       >
-        <ChatSidebar activeId={chatId} />
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: 400,
-            background: 'rgba(22,24,31,0.5)',
-            borderRadius: 16,
-            border: '1px solid rgba(255,255,255,0.06)',
-            color: 'rgba(240,242,255,0.4)',
-            fontSize: 15,
-          }}
-        >
-          Chat not found.
-        </div>
+        Chat not found.
       </div>
     );
   }
@@ -63,9 +55,6 @@ export default function ChatThreadPage() {
         animation: 'fadeIn 0.3s ease-out',
       }}
     >
-      {/* Sidebar */}
-      <ChatSidebar activeId={chatId} />
-
       {/* Main chat area */}
       <div
         style={{
@@ -76,8 +65,11 @@ export default function ChatThreadPage() {
           gap: 0,
           minWidth: 0,
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.06)',
-          background: 'rgba(16,18,25,0.8)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          background: 'transparent',
+          backdropFilter: 'blur(40px) brightness(1.05)',
+          WebkitBackdropFilter: 'blur(40px) brightness(1.05)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.2)',
           overflow: 'hidden',
         }}
       >
@@ -85,9 +77,11 @@ export default function ChatThreadPage() {
         <div
           style={{
             padding: '16px 20px',
-            borderBottom: '1px solid rgba(255,255,255,0.05)',
-            background: 'rgba(22,24,31,0.7)',
-            backdropFilter: 'blur(12px)',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            background: 'rgba(22, 24, 31, 0.4)',
+            backdropFilter: 'blur(30px) brightness(1.1)',
+            WebkitBackdropFilter: 'blur(30px) brightness(1.1)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
             display: 'flex',
             alignItems: 'center',
             gap: 12,
@@ -227,8 +221,11 @@ export default function ChatThreadPage() {
                     style={{
                       padding: '14px 16px',
                       borderRadius: 12,
-                      background: 'rgba(99,102,241,0.07)',
-                      border: '1px solid rgba(99,102,241,0.15)',
+                      background: 'rgba(99,102,241,0.12)',
+                      backdropFilter: 'blur(20px)',
+                      WebkitBackdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(99,102,241,0.25)',
+                      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
                       cursor: 'pointer',
                       textAlign: 'left',
                       transition: 'all 0.2s ease',
@@ -239,17 +236,17 @@ export default function ChatThreadPage() {
                     }}
                     onMouseEnter={(e) => {
                       const el = e.currentTarget as HTMLElement;
-                      el.style.background = 'rgba(99,102,241,0.15)';
-                      el.style.borderColor = 'rgba(99,102,241,0.35)';
+                      el.style.background = 'rgba(99,102,241,0.22)';
+                      el.style.borderColor = 'rgba(99,102,241,0.5)';
                       el.style.transform = 'translateY(-2px)';
-                      el.style.boxShadow = '0 8px 20px rgba(99,102,241,0.15)';
+                      el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 20px rgba(99,102,241,0.2)';
                     }}
                     onMouseLeave={(e) => {
                       const el = e.currentTarget as HTMLElement;
-                      el.style.background = 'rgba(99,102,241,0.07)';
-                      el.style.borderColor = 'rgba(99,102,241,0.15)';
+                      el.style.background = 'rgba(99,102,241,0.12)';
+                      el.style.borderColor = 'rgba(99,102,241,0.25)';
                       el.style.transform = 'translateY(0)';
-                      el.style.boxShadow = 'none';
+                      el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.08)';
                     }}
                   >
                     <span style={{ fontSize: 20 }}>{p.icon}</span>

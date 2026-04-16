@@ -14,9 +14,12 @@ export function ChatInput({ onSend, disabled }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [rows, setRows] = useState(1);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const attachmentsRef = useRef<HTMLDivElement | null>(null);
 
   const { upload, loading: uploadLoading } = useUpload();
   const busy = !!disabled || uploadLoading;
@@ -28,6 +31,19 @@ export function ChatInput({ onSend, disabled }: Props) {
       setRows(Math.min(Math.max(lineCount, 1), 5));
     }
   }, [text]);
+
+  useEffect(() => {
+    // Close attachments on outside click
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachmentsRef.current && !attachmentsRef.current.contains(e.target as Node)) {
+        setAttachmentsOpen(false);
+      }
+    };
+    if (attachmentsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [attachmentsOpen]);
 
   useEffect(() => {
     return () => {
@@ -104,16 +120,18 @@ export function ChatInput({ onSend, disabled }: Props) {
       style={{
         borderRadius: 14,
         background: isFocused
-          ? 'rgba(30,33,44,0.95)'
-          : 'rgba(22,24,31,0.9)',
+          ? 'rgba(30, 33, 44, 0.6)'
+          : 'rgba(22, 24, 31, 0.5)',
+        backdropFilter: 'blur(30px) brightness(1.05)',
+        WebkitBackdropFilter: 'blur(30px) brightness(1.05)',
         border: `1.5px solid ${
           isFocused
-            ? 'rgba(99,102,241,0.5)'
-            : 'rgba(255,255,255,0.07)'
+            ? 'rgba(99,102,241,0.6)'
+            : 'rgba(255,255,255,0.12)'
         }`,
         boxShadow: isFocused
-          ? '0 0 0 4px rgba(99,102,241,0.1), 0 12px 32px rgba(0,0,0,0.3)'
-          : '0 4px 16px rgba(0,0,0,0.2)',
+          ? 'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px rgba(99,102,241,0.15), 0 12px 32px rgba(0,0,0,0.3)'
+          : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 16px rgba(0,0,0,0.2)',
         transition: 'all 0.25s ease',
         overflow: 'hidden',
       }}
@@ -159,149 +177,224 @@ export function ChatInput({ onSend, disabled }: Props) {
           alignItems: 'center',
           gap: 8,
           padding: '8px 12px 10px',
-          borderTop: '1px solid rgba(255,255,255,0.04)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          background: 'rgba(0,0,0,0.1)',
         }}
       >
         {/* Left actions */}
-        <div style={{ display: 'flex', gap: 6, flex: 1, flexWrap: 'wrap' }}>
-          {/* File upload */}
-          <label
-            title="Upload file"
-            style={{
-              padding: '7px 12px',
-              fontSize: 12,
-              fontWeight: 500,
-              borderRadius: 8,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(240,242,255,0.55)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-              cursor: busy ? 'not-allowed' : 'pointer',
-              opacity: busy ? 0.5 : 1,
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              if (!busy) {
-                const el = e.currentTarget as HTMLElement;
-                el.style.background = 'rgba(255,255,255,0.1)';
-                el.style.color = 'rgba(240,242,255,0.85)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background = 'rgba(255,255,255,0.05)';
-              el.style.color = 'rgba(240,242,255,0.55)';
-            }}
-          >
-            📎 File
-            <input
-              type="file"
-              style={{ display: 'none' }}
-              disabled={busy}
-              onChange={(e) => onPickFile(e.target.files?.[0] ?? null)}
-            />
-          </label>
-
-          {/* Camera */}
-          {!cameraOn ? (
+        <div style={{ display: 'flex', gap: 6, flex: 1, flexWrap: 'wrap', position: 'relative', alignItems: 'center' }}>
+          {/* Attachments dropdown */}
+          <div style={{ position: 'relative' }} ref={attachmentsRef}>
             <button
-              id="chat-camera-btn"
+              id="chat-attachments-btn"
               type="button"
-              onClick={startCamera}
+              onClick={() => setAttachmentsOpen(!attachmentsOpen)}
               disabled={busy}
+              title="Add attachments"
               style={{
                 padding: '7px 12px',
                 fontSize: 12,
                 fontWeight: 500,
                 borderRadius: 8,
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: 'rgba(240,242,255,0.55)',
-                cursor: busy ? 'not-allowed' : 'pointer',
-                opacity: busy ? 0.5 : 1,
+                background: 'rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(15px)',
+                WebkitBackdropFilter: 'blur(15px)',
+                border: attachmentsOpen ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.15)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                color: attachmentsOpen ? '#a5b4fc' : 'rgba(240,242,255,0.65)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
+                cursor: busy ? 'not-allowed' : 'pointer',
+                opacity: busy ? 0.5 : 1,
                 transition: 'all 0.2s ease',
               }}
               onMouseEnter={(e) => {
                 if (!busy) {
                   const el = e.currentTarget as HTMLElement;
-                  el.style.background = 'rgba(255,255,255,0.1)';
-                  el.style.color = 'rgba(240,242,255,0.85)';
+                  el.style.background = 'rgba(255,255,255,0.15)';
+                  el.style.borderColor = 'rgba(99,102,241,0.4)';
+                  el.style.color = 'rgba(240,242,255,0.9)';
                 }
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLElement;
-                el.style.background = 'rgba(255,255,255,0.05)';
-                el.style.color = 'rgba(240,242,255,0.55)';
+                el.style.background = 'rgba(255,255,255,0.08)';
+                el.style.borderColor = attachmentsOpen ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.15)';
+                el.style.color = attachmentsOpen ? '#a5b4fc' : 'rgba(240,242,255,0.65)';
               }}
             >
-              📷 Camera
+              📎 Attach
             </button>
-          ) : (
-            <>
-              <button
-                id="chat-capture-btn"
-                type="button"
-                onClick={capture}
-                disabled={busy || !canCapture}
+
+            {/* Dropdown menu */}
+            {attachmentsOpen && (
+              <div
                 style={{
-                  padding: '7px 12px',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  borderRadius: 8,
-                  background: 'rgba(16,185,129,0.1)',
-                  border: '1px solid rgba(16,185,129,0.25)',
-                  color: '#34d399',
-                  cursor: busy ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  if (!busy) {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.18)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(16,185,129,0.1)';
+                  position: 'absolute',
+                  bottom: 'calc(100% + 8px)',
+                  left: 0,
+                  background: 'rgba(30, 33, 44, 0.9)',
+                  backdropFilter: 'blur(20px) brightness(1.1)',
+                  WebkitBackdropFilter: 'blur(20px) brightness(1.1)',
+                  border: '1px solid rgba(99,102,241,0.3)',
+                  borderRadius: 12,
+                  padding: '8px',
+                  zIndex: 1000,
+                  minWidth: 180,
+                  boxShadow: '0 12px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  animation: 'slideUp 0.2s ease-out',
                 }}
               >
-                ✅ Capture
-              </button>
-              <button
-                id="chat-stop-camera-btn"
-                type="button"
-                onClick={stopCamera}
-                style={{
-                  padding: '7px 12px',
-                  fontSize: 12,
-                  fontWeight: 500,
-                  borderRadius: 8,
-                  background: 'rgba(239,68,68,0.1)',
-                  border: '1px solid rgba(239,68,68,0.25)',
-                  color: '#f87171',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 5,
-                  transition: 'all 0.2s ease',
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.18)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
-                }}
-              >
-                ❌ Stop
-              </button>
-            </>
-          )}
+                {/* File option */}
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    background: 'transparent',
+                    transition: 'all 0.2s ease',
+                    opacity: busy ? 0.5 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!busy) e.currentTarget.style.background = 'rgba(99,102,241,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>📄</span>
+                  <span style={{ fontSize: 13, color: 'rgba(240,242,255,0.8)' }}>File</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    style={{ display: 'none' }}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        onPickFile(file);
+                        setAttachmentsOpen(false);
+                      }
+                    }}
+                  />
+                </label>
+
+                {/* Document option */}
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    background: 'transparent',
+                    transition: 'all 0.2s ease',
+                    opacity: busy ? 0.5 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!busy) e.currentTarget.style.background = 'rgba(99,102,241,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>📑</span>
+                  <span style={{ fontSize: 13, color: 'rgba(240,242,255,0.8)' }}>Document</span>
+                  <input
+                    type="file"
+                    accept="application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+                    style={{ display: 'none' }}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        onPickFile(file);
+                        setAttachmentsOpen(false);
+                      }
+                    }}
+                  />
+                </label>
+
+                {/* Image option */}
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    background: 'transparent',
+                    transition: 'all 0.2s ease',
+                    opacity: busy ? 0.5 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!busy) e.currentTarget.style.background = 'rgba(99,102,241,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>🖼️</span>
+                  <span style={{ fontSize: 13, color: 'rgba(240,242,255,0.8)' }}>Image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    disabled={busy}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        onPickFile(file);
+                        setAttachmentsOpen(false);
+                      }
+                    }}
+                  />
+                </label>
+
+                {/* Camera option */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    startCamera();
+                    setAttachmentsOpen(false);
+                  }}
+                  disabled={busy}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    background: 'transparent',
+                    transition: 'all 0.2s ease',
+                    opacity: busy ? 0.5 : 1,
+                    border: 'none',
+                    width: '100%',
+                    color: 'inherit',
+                    fontSize: 'inherit',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!busy) e.currentTarget.style.background = 'rgba(99,102,241,0.15)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>📷</span>
+                  <span style={{ fontSize: 13, color: 'rgba(240,242,255,0.8)' }}>Camera</span>
+                </button>
+              </div>
+            )}
+          </div>
 
           {uploadLoading && (
             <div
@@ -347,14 +440,18 @@ export function ChatInput({ onSend, disabled }: Props) {
             fontSize: 13,
             fontWeight: 700,
             borderRadius: 10,
-            border: 'none',
+            border: canSend ? '1px solid rgba(255,255,255,0.2)' : 'none',
             background: canSend
               ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
               : 'rgba(99,102,241,0.15)',
+            backdropFilter: canSend ? 'none' : 'blur(15px)',
+            WebkitBackdropFilter: canSend ? 'none' : 'blur(15px)',
             color: canSend ? '#fff' : 'rgba(240,242,255,0.3)',
             cursor: canSend ? 'pointer' : 'not-allowed',
             transition: 'all 0.2s ease',
-            boxShadow: canSend ? '0 4px 16px rgba(99,102,241,0.35)' : 'none',
+            boxShadow: canSend 
+              ? 'inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(99,102,241,0.35)'
+              : 'inset 0 1px 0 rgba(255,255,255,0.05)',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
@@ -364,13 +461,13 @@ export function ChatInput({ onSend, disabled }: Props) {
             if (canSend) {
               const el = e.currentTarget as HTMLElement;
               el.style.transform = 'translateY(-1px) scale(1.03)';
-              el.style.boxShadow = '0 8px 24px rgba(99,102,241,0.5)';
+              el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 24px rgba(99,102,241,0.5)';
             }
           }}
           onMouseLeave={(e) => {
             const el = e.currentTarget as HTMLElement;
             el.style.transform = 'translateY(0) scale(1)';
-            el.style.boxShadow = canSend ? '0 4px 16px rgba(99,102,241,0.35)' : 'none';
+            el.style.boxShadow = canSend ? 'inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(99,102,241,0.35)' : 'inset 0 1px 0 rgba(255,255,255,0.05)';
           }}
         >
           {busy ? (

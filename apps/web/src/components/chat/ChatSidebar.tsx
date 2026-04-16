@@ -13,9 +13,12 @@ export function ChatSidebar({ activeId }: { activeId?: string }) {
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
-        background: 'rgba(16,18,25,0.8)',
+        background: 'rgba(16, 18, 25, 0.5)',
+        backdropFilter: 'blur(40px) brightness(1.05)',
+        WebkitBackdropFilter: 'blur(40px) brightness(1.05)',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid rgba(255,255,255,0.15)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.2)',
         overflow: 'hidden',
         height: '100%',
         animation: 'slideInLeft 0.3s ease-out',
@@ -25,11 +28,14 @@ export function ChatSidebar({ activeId }: { activeId?: string }) {
       <div
         style={{
           padding: '16px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: 'rgba(22,24,31,0.6)',
+          background: 'rgba(22, 24, 31, 0.4)',
+          backdropFilter: 'blur(20px) brightness(1.1)',
+          WebkitBackdropFilter: 'blur(20px) brightness(1.1)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
           flexShrink: 0,
         }}
       >
@@ -50,10 +56,11 @@ export function ChatSidebar({ activeId }: { activeId?: string }) {
                 background: 'rgba(99,102,241,0.2)',
                 border: '1px solid rgba(99,102,241,0.3)',
                 color: '#a5b4fc',
-                fontSize: 10,
+                fontSize: 11,
                 fontWeight: 700,
-                padding: '2px 7px',
+                padding: '3px 8px',
                 borderRadius: 999,
+                lineHeight: 1,
               }}
             >
               {threads.length}

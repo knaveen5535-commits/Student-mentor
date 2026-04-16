@@ -9,6 +9,7 @@ export function useChat(threadId: string) {
   const profile = useUserStore((s) => s.profile);
   const addMessage = useChatStore((s) => s.addMessage);
   const setTitleFromFirstMessage = useChatStore((s) => s.setTitleFromFirstMessage);
+  const updateThreadId = useChatStore((s) => s.updateThreadId);
   const [loading, setLoading] = useState(false);
 
   async function sendMessage(content: string) {
@@ -22,12 +23,18 @@ export function useChat(threadId: string) {
       const thread = useChatStore.getState().threads.find((t) => t.id === threadId);
       const messages = (thread?.messages || []).map((m) => ({ role: m.role, content: m.content }));
 
-      const data = await apiFetch<{ message: { role: 'assistant'; content: string } }>(`/chat`, {
+      const data = await apiFetch<{ message: { role: 'assistant'; content: string }; threadId?: string }>(`/chat`, {
         method: 'POST',
         userEmail: profile.email,
-        body: { messages }
+        body: { messages, threadId }
       });
+
       addMessage(threadId, { role: 'assistant', content: data.message.content });
+
+      // If backend returned a different threadId, update the store
+      if (data.threadId && data.threadId !== threadId) {
+        updateThreadId(threadId, data.threadId);
+      }
     } finally {
       setLoading(false);
     }

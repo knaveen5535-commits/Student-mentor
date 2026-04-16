@@ -11,6 +11,8 @@ import { projectRoutes } from './routes/project.routes.js';
 import { uploadRoutes } from './routes/upload.routes.js';
 import { profileRoutes } from './routes/profile.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
+import tutorialsRoutes from './routes/tutorials.routes.js';
+import setupRoutes from './routes/setup.routes.js';
 import { uploadDir } from './services/file.service.js';
 
 const app = express();
@@ -52,6 +54,8 @@ app.use('/chat', chatRoutes);
 app.use('/projects', projectRoutes);
 app.use('/uploads', uploadRoutes);
 app.use('/profile', profileRoutes);
+app.use('/tutorials', tutorialsRoutes);
+app.use('/setup', setupRoutes);
 
 app.use('/uploads', express.static(uploadDir));
 

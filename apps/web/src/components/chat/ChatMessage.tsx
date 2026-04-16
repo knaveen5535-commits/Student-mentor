@@ -72,18 +72,20 @@ export function ChatMessage({ msg }: { msg: Msg }) {
             borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
             background: isUser
               ? 'linear-gradient(135deg, #6366f1 0%, #7c3aed 100%)'
-              : 'rgba(30,33,44,0.9)',
+              : 'rgba(30, 33, 44, 0.5)',
+            backdropFilter: isUser ? 'none' : 'blur(30px)',
+            WebkitBackdropFilter: isUser ? 'none' : 'blur(30px)',
             border: isUser
-              ? 'none'
-              : '1px solid rgba(255,255,255,0.07)',
-            color: isUser ? '#fff' : 'rgba(240,242,255,0.9)',
+              ? '1px solid rgba(255,255,255,0.2)'
+              : '1px solid rgba(255,255,255,0.15)',
+            boxShadow: isUser
+              ? 'inset 0 1px 0 rgba(255,255,255,0.3), 0 8px 20px rgba(99,102,241,0.3)'
+              : 'inset 0 1px 0 rgba(255,255,255,0.08), 0 2px 8px rgba(0,0,0,0.2)',
+            color: isUser ? '#fff' : 'rgba(240,242,255,0.95)',
             lineHeight: 1.65,
             wordBreak: 'break-word',
             whiteSpace: 'pre-wrap',
             fontSize: 14,
-            boxShadow: isUser
-              ? '0 8px 20px rgba(99,102,241,0.3)'
-              : '0 2px 8px rgba(0,0,0,0.2)',
           }}
         >
           {msg.content}

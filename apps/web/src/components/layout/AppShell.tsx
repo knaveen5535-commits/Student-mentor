@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUserStore } from '../../store/userStore';
+import { useChatStore } from '../../store/chatStore';
 
 /* ─────────────────── Nav items ────────────────── */
 const NAV_ITEMS = [
   { href: '/chat',      label: 'Chat',       icon: '💬', desc: 'AI conversations' },
   { href: '/projects',  label: 'Projects',   icon: '📁', desc: 'Your projects'    },
-  { href: '/uploads',   label: 'Uploads',    icon: '📤', desc: 'File manager'     },
   { href: '/tutorials', label: 'Tutorials',  icon: '🎓', desc: 'Learn & grow'     },
   { href: '/profile',   label: 'Profile',    icon: '👤', desc: 'Account settings' },
 ];
@@ -132,6 +132,9 @@ function Sidebar({
   logout: () => void;
 }) {
   const [time, setTime] = useState('');
+  const [showChats, setShowChats] = useState(false);
+  const threads = useChatStore((s) => s.threads);
+  const pathname = usePathname();
 
   useEffect(() => {
     const update = () => {
@@ -153,7 +156,9 @@ function Sidebar({
         height: '100vh',
         flexShrink: 0,
         background: 'rgba(14, 15, 20, 0.98)',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
+        backdropFilter: 'blur(40px) brightness(1.05)',
+        WebkitBackdropFilter: 'blur(40px) brightness(1.05)',
+        borderRight: '1px solid rgba(99, 102, 241, 0.2)',
         display: 'flex',
         flexDirection: 'column',
         transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -161,6 +166,7 @@ function Sidebar({
         position: 'sticky',
         top: 0,
         zIndex: 50,
+        boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.08)',
       }}
     >
       {/* Top: Logo + toggle */}
@@ -327,15 +333,161 @@ function Sidebar({
               textTransform: 'uppercase',
               color: 'rgba(240,242,255,0.25)',
               padding: '4px 14px 8px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             }}
           >
-            Navigation
+            <span>Navigation</span>
+            <button
+              onClick={() => setShowChats(!showChats)}
+              title="Toggle chats"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 6,
+                background: showChats ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 12,
+                fontWeight: 700,
+                color: '#fff',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
+                border: 'none',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.transform = 'scale(1.1)';
+                el.style.boxShadow = '0 4px 12px rgba(99,102,241,0.5)';
+              }}
+              onMouseLeave={(e) => {
+                const el = e.currentTarget as HTMLElement;
+                el.style.transform = 'scale(1)';
+                el.style.boxShadow = '0 2px 8px rgba(99,102,241,0.3)';
+              }}
+            >
+              +
+            </button>
           </div>
         )}
 
-        {NAV_ITEMS.map((item) => (
-          <SidebarNav key={item.href} {...item} collapsed={collapsed} />
-        ))}
+        {collapsed && (
+          <button
+            onClick={() => setShowChats(!showChats)}
+            title="Toggle chats"
+            style={{
+              width: 36,
+              height: 36,
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              marginTop: 4,
+              marginBottom: 4,
+              borderRadius: 8,
+              background: showChats ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 16,
+              fontWeight: 700,
+              color: '#fff',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.transform = 'scale(1.1)';
+              el.style.boxShadow = '0 6px 16px rgba(99,102,241,0.5)';
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.transform = 'scale(1)';
+              el.style.boxShadow = '0 4px 12px rgba(99,102,241,0.3)';
+            }}
+          >
+            +
+          </button>
+        )}
+
+        {showChats ? (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 2,
+              maxHeight: 300,
+              overflowY: 'auto',
+              paddingRight: 4,
+            }}
+          >
+            {threads.length === 0 ? (
+              <div
+                style={{
+                  fontSize: 12,
+                  color: 'rgba(240,242,255,0.3)',
+                  padding: '12px',
+                  textAlign: 'center',
+                }}
+              >
+                No chats yet
+              </div>
+            ) : (
+              threads.map((t) => {
+                const active = pathname === `/chat/${t.id}`;
+                return (
+                  <Link
+                    key={t.id}
+                    href={`/chat/${t.id}`}
+                    style={{
+                      padding: collapsed ? '8px' : '10px 12px',
+                      borderRadius: 8,
+                      background: active
+                        ? 'rgba(99,102,241,0.2)'
+                        : 'transparent',
+                      border: active
+                        ? '1px solid rgba(99,102,241,0.3)'
+                        : '1px solid transparent',
+                      color: active ? '#a5b4fc' : 'rgba(240,242,255,0.6)',
+                      fontSize: 12,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s ease',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      display: 'block',
+                    }}
+                    onMouseEnter={(e) => {
+                      const el = e.currentTarget as HTMLElement;
+                      if (!active) {
+                        el.style.background = 'rgba(255,255,255,0.05)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      const el = e.currentTarget as HTMLElement;
+                      if (!active) {
+                        el.style.background = 'transparent';
+                      }
+                    }}
+                  >
+                    {collapsed ? '💬' : t.title || 'Chat'}
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        ) : null}
+
+        {!showChats && (
+          <>
+            {NAV_ITEMS.map((item) => (
+              <SidebarNav key={item.href} {...item} collapsed={collapsed} />
+            ))}
+          </>
+        )}
       </nav>
 
       {/* Bottom: User info + logout */}
@@ -468,9 +620,9 @@ function WorkspaceHeader({
       style={{
         height: 60,
         background: 'rgba(10,11,15,0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        backdropFilter: 'blur(40px) brightness(1.08)',
+        WebkitBackdropFilter: 'blur(40px) brightness(1.08)',
+        borderBottom: '1px solid rgba(99, 102, 241, 0.15)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 20px',
@@ -479,6 +631,7 @@ function WorkspaceHeader({
         top: 0,
         zIndex: 40,
         flexShrink: 0,
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.2)',
       }}
     >
       {/* Mobile hamburger */}
@@ -684,8 +837,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             overflowX: 'hidden',
             padding: '20px',
             background: 'linear-gradient(180deg, #0a0b0f 0%, #0d0e14 100%)',
+            position: 'relative',
           }}
         >
+          {/* Glassmorphism background effects */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: -1,
+              backgroundImage: `
+                radial-gradient(circle at 25% 25%, rgba(99,102,241,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(139,92,246,0.08) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(165,180,252,0.05) 0%, transparent 60%)
+              `,
+              pointerEvents: 'none',
+            }}
+          />
           {children}
         </main>
       </div>

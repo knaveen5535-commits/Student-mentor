@@ -71,8 +71,22 @@ export default function LoginPage() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [particles] = useState(generateParticles(25));
   const [mounted, setMounted] = useState(false);
+  const [brainRotation, setBrainRotation] = useState({ x: 0, y: 0 });
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Interactive brain logo rotation
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e;
+      const { innerWidth, innerHeight } = window;
+      const x = (clientX / innerWidth - 0.5) * 2; // -1 to 1
+      const y = (clientY / innerHeight - 0.5) * 2; // -1 to 1
+      setBrainRotation({ x: -y * 15, y: x * 15 }); // Tilt effect
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   const userInputValid = userInput.trim().length > 0;
   const passwordValid = password.length > 0;
@@ -99,12 +113,29 @@ export default function LoginPage() {
         name: userInput.trim().split('@')[0],
         provider: 'demo',
       };
+      
+      // Ensure user exists in Supabase
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+      const ensureUserRes = await fetch(`${apiUrl}/auth/ensure-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userProfile.email,
+          name: userProfile.name
+        })
+      });
+      
+      if (!ensureUserRes.ok) {
+        const errData = await ensureUserRes.json().catch(() => ({}));
+        throw new Error(errData.error || 'Failed to create user');
+      }
+      
       localStorage.setItem('ai_workspace_user_profile', JSON.stringify(userProfile));
       login(userProfile);
       await new Promise((r) => setTimeout(r, 600));
       router.push('/chat');
-    } catch {
-      setError('Login failed. Please try again.');
+    } catch (err) {
+      setError((err as Error).message || 'Login failed. Please try again.');
       setLoading(false);
     }
   };
@@ -126,6 +157,25 @@ export default function LoginPage() {
         overflow: 'hidden',
       }}
     >
+      {/* Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          zIndex: 0,
+          opacity: 0.3,
+        }}
+      >
+        <source src="/assets/AI MENTOR.mp4" type="video/mp4" />
+      </video>
+
       <GridBackground />
 
       {/* Floating particles */}
@@ -167,28 +217,31 @@ export default function LoginPage() {
           href="/signup"
           style={{
             padding: '9px 20px',
-            background: 'rgba(99,102,241,0.12)',
-            border: '1px solid rgba(99,102,241,0.35)',
+            background: 'rgba(99,102,241,0.15)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(99,102,241,0.4)',
             color: '#a5b4fc',
             fontSize: 14,
             fontWeight: 600,
-            borderRadius: 10,
+            borderRadius: 12,
             transition: 'all 0.25s ease',
             display: 'inline-block',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(99,102,241,0.1)',
           }}
           onMouseEnter={(e) => {
             const el = e.currentTarget as HTMLElement;
             el.style.background = 'rgba(99,102,241,0.25)';
             el.style.borderColor = 'rgba(99,102,241,0.6)';
             el.style.transform = 'translateY(-2px)';
-            el.style.boxShadow = '0 8px 24px rgba(99,102,241,0.2)';
+            el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.15), 0 12px 24px rgba(99,102,241,0.25)';
           }}
           onMouseLeave={(e) => {
             const el = e.currentTarget as HTMLElement;
-            el.style.background = 'rgba(99,102,241,0.12)';
-            el.style.borderColor = 'rgba(99,102,241,0.35)';
+            el.style.background = 'rgba(99,102,241,0.15)';
+            el.style.borderColor = 'rgba(99,102,241,0.4)';
             el.style.transform = 'translateY(0)';
-            el.style.boxShadow = 'none';
+            el.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.1), 0 4px 12px rgba(99,102,241,0.1)';
           }}
         >
           Create Account →
@@ -207,23 +260,92 @@ export default function LoginPage() {
       >
         {/* Logo / Brand */}
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          {/* AI icon with glow ring */}
+          {/* AI icon with glow ring - Interactive */}
           <div
             style={{
+              position: 'relative',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
               width: 72,
               height: 72,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              boxShadow: '0 0 0 12px rgba(99,102,241,0.12), 0 0 40px rgba(99,102,241,0.35)',
               marginBottom: 24,
-              fontSize: 32,
-              animation: 'float 4s ease-in-out infinite',
             }}
           >
-            🧠
+            {/* Outer rotating halo */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: -8,
+                borderRadius: '50%',
+                background: 'conic-gradient(from 0deg, #6366f1, #8b5cf6, #ec4899, #6366f1)',
+                opacity: 0.4,
+                animation: 'spin 8s linear infinite',
+              }}
+            />
+
+            {/* Inner pulsing glow */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: -12,
+                borderRadius: '50%',
+                boxShadow: '0 0 40px rgba(99,102,241,0.5), inset 0 0 40px rgba(99,102,241,0.2)',
+                animation: 'pulse-glow 3s ease-in-out infinite',
+              }}
+            />
+
+            {/* Interactive Brain Logo */}
+            <div
+              style={{
+                perspective: '1000px',
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.1s ease-out',
+                transform: `rotateX(${brainRotation.x}deg) rotateY(${brainRotation.y}deg)`,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 80,
+                  lineHeight: 1,
+                  textAlign: 'center',
+                  position: 'relative',
+                  animation: 'pulse 5s infinite ease-in-out',
+                }}
+              >
+                🧠
+                {/* Halo effect */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: '150%',
+                    height: '150%',
+                    background: 'radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 60%)',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    zIndex: -1,
+                    animation: 'halo-rotate 20s infinite linear',
+                  }}
+                />
+                {/* Glow effect */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: '120%',
+                    height: '120%',
+                    background: 'rgba(139,92,246,0.2)',
+                    filter: 'blur(20px)',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    zIndex: -2,
+                  }}
+                />
+              </div>
+            </div>
           </div>
 
           <h1
@@ -249,15 +371,28 @@ export default function LoginPage() {
         {/* Card */}
         <div
           style={{
-            background: 'rgba(22, 24, 31, 0.85)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 20,
+            background: 'rgba(15, 17, 24, 0.7)',
+            backdropFilter: 'blur(40px) brightness(1.1)',
+            WebkitBackdropFilter: 'blur(40px) brightness(1.1)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            borderRadius: 24,
             padding: '36px 32px',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(99,102,241,0.08)',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.1), 0 8px 32px rgba(0,0,0,0.3), 0 32px 64px rgba(99,102,241,0.1)',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
+          {/* Glass morphism overlay */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at 0% 0%, rgba(99,102,241,0.08) 0%, transparent 50%)',
+              pointerEvents: 'none',
+              borderRadius: 24,
+            }}
+          />
+
           {/* Card inner gradient top line */}
           <div
             style={{
@@ -271,7 +406,23 @@ export default function LoginPage() {
             }}
           />
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, position: 'relative', zIndex: 2 }}>
+            {/* OR Separator */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                color: 'rgba(240,242,255,0.3)',
+                fontSize: 12,
+                margin: '8px 0',
+              }}
+            >
+              <hr style={{ flex: 1, border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+              OR
+              <hr style={{ flex: 1, border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+            </div>
+
             {/* Email / Username */}
             <div>
               <label
@@ -316,12 +467,14 @@ export default function LoginPage() {
                     paddingRight: 16,
                     height: 52,
                     fontSize: 15,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: `1.5px solid ${focusedField === 'username' ? 'rgba(99,102,241,0.7)' : 'rgba(255,255,255,0.08)'}`,
+                    background: 'rgba(255,255,255,0.06)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: `1.5px solid ${focusedField === 'username' ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: 12,
                     color: '#f0f2ff',
                     transition: 'all 0.25s ease',
-                    boxShadow: focusedField === 'username' ? '0 0 0 4px rgba(99,102,241,0.12)' : 'none',
+                    boxShadow: focusedField === 'username' ? 'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px rgba(99,102,241,0.15)' : 'inset 0 1px 0 rgba(255,255,255,0.05)',
                     outline: 'none',
                     width: '100%',
                     boxSizing: 'border-box',
@@ -391,12 +544,14 @@ export default function LoginPage() {
                     paddingRight: 48,
                     height: 52,
                     fontSize: 15,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: `1.5px solid ${focusedField === 'password' ? 'rgba(99,102,241,0.7)' : 'rgba(255,255,255,0.08)'}`,
+                    background: 'rgba(255,255,255,0.06)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: `1.5px solid ${focusedField === 'password' ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: 12,
                     color: '#f0f2ff',
                     transition: 'all 0.25s ease',
-                    boxShadow: focusedField === 'password' ? '0 0 0 4px rgba(99,102,241,0.12)' : 'none',
+                    boxShadow: focusedField === 'password' ? 'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px rgba(99,102,241,0.15)' : 'inset 0 1px 0 rgba(255,255,255,0.05)',
                     outline: 'none',
                     width: '100%',
                     boxSizing: 'border-box',
@@ -514,10 +669,9 @@ export default function LoginPage() {
             </div>
 
             {/* Social Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
               {[
                 { label: 'Google', icon: '🔵', id: 'login-google' },
-                { label: 'GitHub', icon: '⚫', id: 'login-github' },
               ].map((s) => (
                 <button
                   key={s.label}
@@ -575,6 +729,30 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+        @keyframes pulse-glow {
+          0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3), inset 0 0 20px rgba(99, 102, 241, 0.1); }
+          50%       { box-shadow: 0 0 60px rgba(99, 102, 241, 0.8), inset 0 0 40px rgba(99, 102, 241, 0.3); }
+        }
+        @keyframes fadeInScale {
+          from { opacity: 0; transform: scale(0.95); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes particle-move {
+          0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0.6; }
+          50%  { transform: translateY(-60px) translateX(20px) scale(1.2); opacity: 1; }
+          100% { transform: translateY(-120px) translateX(-10px) scale(0.8); opacity: 0; }
+        }
+      `}</style>
     </div>
   );
 }

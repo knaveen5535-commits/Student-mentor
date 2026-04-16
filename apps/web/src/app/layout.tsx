@@ -30,7 +30,28 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: -1,
+            opacity: 0.15,
+            filter: 'blur(8px)',
+          }}
+        >
+          <source src="/assets/workspace.mp4" type="video/mp4" />
+        </video>
+        {children}
+      </body>
     </html>
   );
 }

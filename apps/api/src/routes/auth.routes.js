@@ -4,7 +4,8 @@ import {
   handleGoogleAuth,
   getCurrentUser,
   logout,
-  verifyToken
+  verifyToken,
+  ensureUserExists
 } from '../controllers/auth.controller.js';
 
 const router = express.Router();
@@ -36,6 +37,12 @@ router.get('/user', getCurrentUser);
  * Requires JWT token in Authorization header
  */
 router.get('/verify', verifyToken);
+
+/**
+ * Create or update user in Supabase (for demo/email-based auth)
+ * POST body: { email, name?, picture? }
+ */
+router.post('/ensure-user', ensureUserExists);
 
 /**
  * Logout endpoint

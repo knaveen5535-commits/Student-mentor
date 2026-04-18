@@ -1,27 +1,29 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUserStore } from '../store/userStore';
+import { useSupabaseAuth } from '../hooks/useSupabaseAuth';
 
 /**
  * ProtectedRoute Component
- * Uses the localStorage-based userStore (not Supabase) so it works
- * even when Supabase credentials are not configured.
+ * Uses Supabase auth state (with local storage fallback) to prevent redirect loops.
  */
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const hydrated = useUserStore((s) => s.hydrated);
-  const loggedIn = useUserStore((s) => s.loggedIn);
+  const { session, user, loading } = useSupabaseAuth();
+  const didRedirect = useRef(false);
+
+  const isAuthenticated = !!session || !!user;
 
   useEffect(() => {
-    if (hydrated && !loggedIn) {
+    if (!loading && !isAuthenticated && !didRedirect.current) {
+      didRedirect.current = true;
       router.replace('/login');
     }
-  }, [hydrated, loggedIn, router]);
+  }, [loading, isAuthenticated, router]);
 
   // Show loading screen while hydrating from localStorage
-  if (!hydrated) {
+  if (loading) {
     return (
       <div
         style={{
@@ -54,7 +56,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
             letterSpacing: '0.05em',
           }}
         >
-          Loading workspace...
+          Loading...
         </p>
         <style>{`
           @keyframes spin {
@@ -67,7 +69,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   // Not logged in — redirect handled by useEffect above
-  if (!loggedIn) return null;
+  if (!isAuthenticated) return null;
 
   return <>{children}</>;
 }

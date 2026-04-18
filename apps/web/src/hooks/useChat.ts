@@ -26,8 +26,10 @@ export function useChat(threadId: string) {
       const data = await apiFetch<{ message: { role: 'assistant'; content: string }; threadId?: string }>(`/chat`, {
         method: 'POST',
         userEmail: profile.email,
-        body: { messages, threadId }
+        body: { messages, threadId, message: content }
       });
+
+      console.log('Chat API response:', data);
 
       addMessage(threadId, { role: 'assistant', content: data.message.content });
 
@@ -35,6 +37,9 @@ export function useChat(threadId: string) {
       if (data.threadId && data.threadId !== threadId) {
         updateThreadId(threadId, data.threadId);
       }
+    } catch (err) {
+      console.error('Chat send failed:', err);
+      throw err;
     } finally {
       setLoading(false);
     }

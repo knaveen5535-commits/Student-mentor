@@ -201,6 +201,23 @@ export async function processChatMessage({ userEmail, threadId, userMessage }) {
     // Add assistant message to thread
     await addMessageToThread(thread.id, userId, 'assistant', assistantMessage.content);
 
+    // Store chat history in Supabase (non-fatal)
+    try {
+      const supabase = getSupabaseAdmin();
+      const { error: historyError } = await supabase
+        .from('chat_history')
+        .insert({
+          user_id: userId,
+          message: userMessage,
+          response: assistantMessage.content
+        });
+      if (historyError) {
+        console.error('Chat history insert failed:', historyError.message);
+      }
+    } catch (err) {
+      console.error('Chat history insert failed:', err.message || err);
+    }
+
     return {
       threadId: thread.id,
       message: assistantMessage

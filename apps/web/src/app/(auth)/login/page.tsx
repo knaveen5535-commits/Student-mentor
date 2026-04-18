@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSupabaseAuth } from '../../../hooks/useSupabaseAuth';
-import { useUserStore } from '../../../store/userStore';
+import { supabase } from '../../../lib/supabase';
 
 /* ── tiny particle helper ────────────────────── */
 type Particle = {
@@ -60,10 +60,10 @@ function GridBackground() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { user } = useSupabaseAuth();
-  const login = useUserStore((s) => s.login);
+  const { user, session, loading: authLoading, loginWithGoogle } = useSupabaseAuth();
+  const redirectingRef = useRef(false);
 
-  const [userInput, setUserInput] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -88,52 +88,39 @@ export default function LoginPage() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const userInputValid = userInput.trim().length > 0;
+  const emailValid = email.trim().length > 0;
   const passwordValid = password.length > 0;
-  const canSubmit = userInputValid && passwordValid && !loading;
+  const canSubmit = emailValid && passwordValid && !loading;
+
+  const shouldRedirect = !!session || !!user;
 
   useEffect(() => {
-    if (user) {
+    if (!authLoading && shouldRedirect && !redirectingRef.current) {
+      redirectingRef.current = true;
       router.replace('/chat');
     }
-  }, [user, router]);
+  }, [authLoading, shouldRedirect, router]);
 
   const handleSubmit = async () => {
     setError(null);
     if (!canSubmit) {
-      if (!userInputValid) setError('Please enter your username or email');
+      if (!emailValid) setError('Please enter your email');
       else if (!passwordValid) setError('Please enter a password');
       return;
     }
     setLoading(true);
     try {
-      const userProfile = {
-        id: `user_${Date.now()}`,
-        email: userInput.trim(),
-        name: userInput.trim().split('@')[0],
-        provider: 'demo',
-      };
-      
-      // Ensure user exists in Supabase
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-      const ensureUserRes = await fetch(`${apiUrl}/auth/ensure-user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: userProfile.email,
-          name: userProfile.name
-        })
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password
       });
-      
-      if (!ensureUserRes.ok) {
-        const errData = await ensureUserRes.json().catch(() => ({}));
-        throw new Error(errData.error || 'Failed to create user');
+
+      if (signInError) {
+        throw signInError;
       }
-      
-      localStorage.setItem('ai_workspace_user_profile', JSON.stringify(userProfile));
-      login(userProfile);
-      await new Promise((r) => setTimeout(r, 600));
-      router.push('/chat');
+
+      redirectingRef.current = true;
+      router.replace('/chat');
     } catch (err) {
       setError((err as Error).message || 'Login failed. Please try again.');
       setLoading(false);
@@ -143,6 +130,33 @@ export default function LoginPage() {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && canSubmit) handleSubmit();
   };
+
+  const handleGoogleLogin = async () => {
+    setError(null);
+    const ok = await loginWithGoogle();
+    if (!ok) {
+      setError('Google login failed. Please try again.');
+    }
+  };
+
+  if (authLoading || shouldRedirect) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0a0b0f',
+          color: 'rgba(240,242,255,0.6)',
+          fontSize: 14,
+          letterSpacing: '0.05em'
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div
@@ -423,7 +437,7 @@ export default function LoginPage() {
               <hr style={{ flex: 1, border: 'none', borderTop: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
 
-            {/* Email / Username */}
+            {/* Email */}
             <div>
               <label
                 style={{
@@ -436,7 +450,7 @@ export default function LoginPage() {
                   marginBottom: 8,
                 }}
               >
-                Email or Username
+                Email
               </label>
               <div style={{ position: 'relative' }}>
                 <span
@@ -455,11 +469,11 @@ export default function LoginPage() {
                 </span>
                 <input
                   id="login-email"
-                  type="text"
-                  placeholder="Enter your email or username"
-                  value={userInput}
-                  onChange={(e) => { setUserInput(e.target.value); setError(null); }}
-                  onFocus={() => setFocusedField('username')}
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                  onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   onKeyDown={handleKeyPress}
                   style={{
@@ -470,11 +484,11 @@ export default function LoginPage() {
                     background: 'rgba(255,255,255,0.06)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    border: `1.5px solid ${focusedField === 'username' ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.12)'}`,
+                    border: `1.5px solid ${focusedField === 'email' ? 'rgba(99,102,241,0.8)' : 'rgba(255,255,255,0.12)'}`,
                     borderRadius: 12,
                     color: '#f0f2ff',
                     transition: 'all 0.25s ease',
-                    boxShadow: focusedField === 'username' ? 'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px rgba(99,102,241,0.15)' : 'inset 0 1px 0 rgba(255,255,255,0.05)',
+                    boxShadow: focusedField === 'email' ? 'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px rgba(99,102,241,0.15)' : 'inset 0 1px 0 rgba(255,255,255,0.05)',
                     outline: 'none',
                     width: '100%',
                     boxSizing: 'border-box',
@@ -677,6 +691,7 @@ export default function LoginPage() {
                   key={s.label}
                   id={s.id}
                   type="button"
+                  onClick={handleGoogleLogin}
                   style={{
                     padding: '12px',
                     background: 'rgba(255,255,255,0.04)',

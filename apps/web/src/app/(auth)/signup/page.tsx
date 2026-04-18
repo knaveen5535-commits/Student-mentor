@@ -1,59 +1,123 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabaseAuth } from '../../../hooks/useSupabaseAuth';
 import { useUserStore } from '../../../store/userStore';
+import { supabase } from '../../../lib/supabase';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { user } = useSupabaseAuth();
+  const { user, session, loading: authLoading } = useSupabaseAuth();
   const login = useUserStore((s) => s.login);
+  const redirectingRef = useRef(false);
+  const lastSubmitRef = useRef(0);
 
-  const [userInput, setUserInput] = useState('');
+  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  const userInputValid = userInput.trim().length > 0;
+  const usernameValid = username.trim().length > 0;
+  const emailValid = email.trim().length > 0;
   const passwordValid = password.length > 0;
-  const canSubmit = userInputValid && passwordValid && !loading;
+  const canSubmit = usernameValid && emailValid && passwordValid && !loading;
+
+  const shouldRedirect = !!session || !!user;
 
   // Check if already logged in with Supabase
   useEffect(() => {
-    if (user) {
-      console.log('✅ User already logged in via Supabase, redirecting to /chat');
+    if (!authLoading && shouldRedirect && !redirectingRef.current) {
+      redirectingRef.current = true;
       router.replace('/chat');
     }
-  }, [user, router]);
+  }, [authLoading, shouldRedirect, router]);
+
+  if (authLoading || shouldRedirect) {
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0a0b0f',
+          color: 'rgba(240,242,255,0.6)',
+          fontSize: 14,
+          letterSpacing: '0.05em'
+        }}
+      >
+        Loading...
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
+    if (loading) return;
+    const now = Date.now();
+    if (now - lastSubmitRef.current < 1500) {
+      setError('Please wait a moment before trying again.');
+      return;
+    }
+    lastSubmitRef.current = now;
     setError(null);
+    setSuccess(null);
     if (!canSubmit) {
-      if (!userInputValid) setError('Please enter your username or email');
+      if (!usernameValid) setError('Please enter a username');
+      else if (!emailValid) setError('Please enter your email');
       else if (!passwordValid) setError('Please enter a password');
       return;
     }
 
     setLoading(true);
     try {
-      // Simulate successful signup - save user to localStorage
-      const userProfile = {
-        id: `user_${Date.now()}`,
-        email: userInput.trim(),
-        name: userInput.trim().split('@')[0], // Use email prefix as name
-        provider: 'demo'
-      };
-      
-      localStorage.setItem('ai_workspace_user_profile', JSON.stringify(userProfile));
-      login(userProfile);
-      
-      await new Promise((r) => setTimeout(r, 400));
-      router.push('/chat');
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password
+      });
+
+      if (signUpError) {
+        throw signUpError;
+      }
+
+      if (data.user) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            username: username.trim(),
+            email: email.trim()
+          });
+
+        if (insertError) {
+          throw insertError;
+        }
+      }
+
+      if (data.session) {
+        login({
+          name: username.trim(),
+          email: email.trim(),
+          provider: 'supabase'
+        });
+        redirectingRef.current = true;
+        router.replace('/chat');
+        return;
+      }
+
+      setSuccess('Account created. You can log in now.');
+      setLoading(false);
     } catch (err) {
-      setError('Signup failed. Please try again.');
+      const message = (err as Error).message || 'Signup failed. Please try again.';
+      if (message.toLowerCase().includes('rate limit')) {
+        setError('Too many signup attempts. Please wait a few minutes and try again.');
+      } else {
+        setError(message);
+      }
       setLoading(false);
     }
   };
@@ -63,6 +127,24 @@ export default function SignupPage() {
       handleSubmit();
     }
   };
+
+  const inputStyle = (focused: boolean) => ({
+    paddingLeft: 16,
+    paddingRight: 16,
+    height: 50,
+    fontSize: 15,
+    width: '100%',
+    borderWidth: 1.5,
+    borderStyle: 'solid',
+    borderColor: focused ? '#3b82f6' : '#374151',
+    borderRadius: 12,
+    background: '#111827',
+    color: '#f9fafb',
+    transition: 'all 0.2s ease',
+    boxShadow: focused ? '0 0 0 3px rgba(59,130,246,0.25)' : 'none',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box'
+  });
 
   return (
     <div
@@ -161,52 +243,63 @@ export default function SignupPage() {
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Username or Email Input */}
+            {/* Username Input */}
             <div>
               <label style={{ 
                 fontSize: 13, 
                 fontWeight: 600, 
-                color: '#1f2937',
+                color: '#e5e7eb',
                 display: 'block', 
                 marginBottom: 8,
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px'
               }}>
-                Username or Email
+                Username
               </label>
               <input
                 type="text"
-                placeholder="Enter username or email"
-                value={userInput}
+                placeholder="Your username"
+                value={username}
                 onChange={(e) => {
-                  setUserInput(e.target.value);
+                  setUsername(e.target.value);
                   setError(null);
+                  setSuccess(null);
                 }}
-                onFocus={() => setFocusedField('userInput')}
+                onFocus={() => setFocusedField('username')}
                 onBlur={() => setFocusedField(null)}
                 onKeyPress={handleKeyPress}
-                style={{
-                  paddingLeft: 16,
-                  paddingRight: 16,
-                  height: 50,
-                  fontSize: 15,
-                  width: '100%',
-                  borderWidth: 2,
-                  borderStyle: 'solid',
-                  borderColor: focusedField === 'userInput' 
-                    ? '#667eea' 
-                    : '#e5e7eb',
-                  borderRadius: 12,
-                  background: focusedField === 'userInput' 
-                    ? 'rgba(102, 126, 234, 0.05)' 
-                    : '#f9fafb',
-                  transition: 'all 0.3s ease',
-                  boxShadow: focusedField === 'userInput' 
-                    ? '0 0 0 4px rgba(102, 126, 234, 0.1)' 
-                    : 'none',
-                  fontFamily: 'inherit',
-                  boxSizing: 'border-box'
+                className="auth-input"
+                style={inputStyle(focusedField === 'username')}
+              />
+            </div>
+
+            {/* Email Input */}
+            <div>
+              <label style={{ 
+                fontSize: 13, 
+                fontWeight: 600, 
+                color: '#e5e7eb',
+                display: 'block', 
+                marginBottom: 8,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                Email
+              </label>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError(null);
+                  setSuccess(null);
                 }}
+                onFocus={() => setFocusedField('email')}
+                onBlur={() => setFocusedField(null)}
+                onKeyPress={handleKeyPress}
+                className="auth-input"
+                style={inputStyle(focusedField === 'email')}
               />
             </div>
 
@@ -215,7 +308,7 @@ export default function SignupPage() {
               <label style={{ 
                 fontSize: 13, 
                 fontWeight: 600, 
-                color: '#1f2937',
+                color: '#e5e7eb',
                 display: 'block', 
                 marginBottom: 8,
                 textTransform: 'uppercase',
@@ -230,32 +323,13 @@ export default function SignupPage() {
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setError(null);
+                  setSuccess(null);
                 }}
                 onFocus={() => setFocusedField('password')}
                 onBlur={() => setFocusedField(null)}
                 onKeyPress={handleKeyPress}
-                style={{
-                  paddingLeft: 16,
-                  paddingRight: 16,
-                  height: 50,
-                  fontSize: 15,
-                  width: '100%',
-                  borderWidth: 2,
-                  borderStyle: 'solid',
-                  borderColor: focusedField === 'password' 
-                    ? '#f093fb' 
-                    : '#e5e7eb',
-                  borderRadius: 12,
-                  background: focusedField === 'password' 
-                    ? 'rgba(240, 147, 251, 0.05)' 
-                    : '#f9fafb',
-                  transition: 'all 0.3s ease',
-                  boxShadow: focusedField === 'password' 
-                    ? '0 0 0 4px rgba(240, 147, 251, 0.1)' 
-                    : 'none',
-                  fontFamily: 'inherit',
-                  boxSizing: 'border-box'
-                }}
+                className="auth-input"
+                style={inputStyle(focusedField === 'password')}
               />
             </div>
 
@@ -276,6 +350,26 @@ export default function SignupPage() {
                 }}
               >
                 ⚠️ {error}
+              </div>
+            ) : null}
+
+            {/* Success Message */}
+            {success ? (
+              <div
+                style={{
+                  padding: 14,
+                  borderRadius: 12,
+                  background: 'rgba(16, 185, 129, 0.12)',
+                  color: '#10b981',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  animation: 'slideIn 0.3s ease-out',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}
+              >
+                ✅ {success}
               </div>
             ) : null}
 
@@ -352,6 +446,9 @@ export default function SignupPage() {
       </div>
 
       <style>{`
+        .auth-input::placeholder {
+          color: rgba(148, 163, 184, 0.75);
+        }
         @keyframes slideIn {
           from {
             opacity: 0;

@@ -17,6 +17,26 @@ export async function handleGoogleAuth(req, res) {
       return res.status(401).json({ error: 'Authentication failed' });
     }
 
+    const supabase = getSupabaseAdmin();
+    const { data: savedUser, error: upsertError } = await supabase
+      .from('users')
+      .upsert(
+        {
+          google_id: user.id,
+          name: user.name,
+          email: user.email,
+          profile_pic: user.picture
+        },
+        { onConflict: 'google_id' }
+      )
+      .select('id, google_id, name, email, profile_pic')
+      .single();
+
+    if (upsertError) {
+      console.error('Supabase upsert error:', upsertError.message);
+      return res.status(500).json({ error: 'Failed to save user' });
+    }
+
     // Save user to in-memory store (replace with database in production)
     users.set(user.id, {
       googleId: user.id,
@@ -26,29 +46,12 @@ export async function handleGoogleAuth(req, res) {
       provider: user.provider
     });
 
-    // Create JWT token
-    const token = jwt.sign(
-      {
-        id: user.id,
-        email: user.email,
-        name: user.name
-      },
-      env.jwtSecret,
-      { expiresIn: '7d' }
-    );
-
-    // Redirect to frontend with token
-    const redirectUrl = `${env.frontendUrl}/auth/callback?token=${token}&user=${encodeURIComponent(
-      JSON.stringify({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        picture: user.picture
-      })
-    )}`;
-
-    res.redirect(redirectUrl);
+    res.json({
+      message: 'Login successful and user saved',
+      user: savedUser
+    });
   } catch (error) {
+    console.error('Google auth error:', error.message);
     res.status(500).json({
       error: 'Authentication failed',
       message: error.message

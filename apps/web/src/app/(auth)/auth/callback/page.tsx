@@ -1,11 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../../../lib/supabase';
+import { useUserStore } from '../../../../store/userStore';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const login = useUserStore((s) => s.login);
+  const didNavigate = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,15 +30,30 @@ export default function AuthCallbackPage() {
 
         if (data.session) {
           console.log('✅ Session established, redirecting to dashboard...');
+          const sessionUser = data.session.user;
+          login({
+            name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || undefined,
+            email: sessionUser.email || undefined,
+            picture: sessionUser.user_metadata?.avatar_url || undefined,
+            provider: sessionUser.app_metadata?.provider || 'google'
+          });
           // Session is set, redirect to dashboard
           // The useSupabaseAuth hook will update the state
-          router.push('/chat');
+          if (!didNavigate.current) {
+            didNavigate.current = true;
+            router.push('/chat');
+          }
         } else {
           console.error('❌ No session found after callback');
           setError('No session found. Please try logging in again.');
           setLoading(false);
           // Redirect to login after a delay
-          setTimeout(() => router.push('/login'), 2000);
+          setTimeout(() => {
+            if (!didNavigate.current) {
+              didNavigate.current = true;
+              router.push('/login');
+            }
+          }, 2000);
         }
       } catch (err) {
         console.error('❌ Callback error:', err);
@@ -45,7 +63,7 @@ export default function AuthCallbackPage() {
     };
 
     handleCallback();
-  }, [router]);
+  }, [login, router]);
 
   return (
     <div

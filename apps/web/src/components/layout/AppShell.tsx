@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUserStore } from '../../store/userStore';
 import { useChatStore } from '../../store/chatStore';
+import { useSupabaseAuth } from '../../hooks/useSupabaseAuth';
 
 /* ─────────────────── Nav items ────────────────── */
 const NAV_ITEMS = [
@@ -752,16 +753,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
   const profile = useUserStore((s) => s.profile);
-  const logoutStore = useUserStore((s) => s.logout);
+  const { logout, loading: authLoading } = useSupabaseAuth();
+  const didLogout = useRef(false);
 
   // Build a user object compatible with Sidebar's expectations
   const user = profile
     ? { name: profile.name, email: profile.email }
     : null;
 
-  const logout = () => {
-    logoutStore();
-    router.push('/login');
+  const handleLogout = async () => {
+    if (authLoading || didLogout.current) return;
+    didLogout.current = true;
+    await logout();
+    router.replace('/login');
   };
 
   return (
@@ -778,7 +782,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         collapsed={collapsed}
         onToggle={() => setCollapsed(!collapsed)}
         user={user}
-        logout={logout}
+        logout={handleLogout}
       />
 
       {/* Mobile overlay sidebar */}
@@ -808,7 +812,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               collapsed={false}
               onToggle={() => setMobileMenuOpen(false)}
               user={user}
-              logout={logout}
+              logout={handleLogout}
             />
           </div>
         </>

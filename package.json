@@ -14,5 +14,14 @@
   "devDependencies": {
     "concurrently": "^9.0.0",
     "supabase": "^2.91.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.103.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0"
   }
 }

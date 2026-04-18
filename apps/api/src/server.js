@@ -1,3 +1,4 @@
+import './config/dotenv.js';
 import express from 'express';
 import cors from 'cors';
 import session from 'express-session';
@@ -11,11 +12,14 @@ import { projectRoutes } from './routes/project.routes.js';
 import { uploadRoutes } from './routes/upload.routes.js';
 import { profileRoutes } from './routes/profile.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
+import { aiRoutes } from './routes/ai.routes.js';
 import tutorialsRoutes from './routes/tutorials.routes.js';
 import setupRoutes from './routes/setup.routes.js';
 import { uploadDir } from './services/file.service.js';
+import { getSupabaseAdmin } from './services/supabase.service.js';
 
 const app = express();
+
 
 // Middleware
 app.use(cors({ 
@@ -48,9 +52,56 @@ app.use(passport.session());
 // Health check
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+// Test Supabase connection
+app.get('/test-db', async (req, res) => {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase.from('users').select('*');
+
+    if (error) {
+      console.error('Supabase test-db error:', error.message);
+      return res.status(500).json({ error: 'Failed to fetch users' });
+    }
+
+    return res.json({ users: data });
+  } catch (err) {
+    console.error('Supabase test-db error:', err.message);
+    return res.status(500).json({ error: 'Failed to fetch users' });
+  }
+});
+
+// Save chat messages
+app.post('/save-chat', async (req, res) => {
+  try {
+    const { user_id, message, response } = req.body || {};
+
+    if (!user_id || !message || !response) {
+      return res.status(400).json({ error: 'user_id, message, and response are required' });
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('chat_history')
+      .insert({ user_id, message, response })
+      .select('id, user_id, message, response, created_at')
+      .single();
+
+    if (error) {
+      console.error('Supabase save-chat error:', error.message);
+      return res.status(500).json({ error: 'Failed to save chat message' });
+    }
+
+    return res.status(201).json({ chat: data });
+  } catch (err) {
+    console.error('Supabase save-chat error:', err.message);
+    return res.status(500).json({ error: 'Failed to save chat message' });
+  }
+});
+
 // Routes
 app.use('/auth', authRoutes);
 app.use('/chat', chatRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/projects', projectRoutes);
 app.use('/uploads', uploadRoutes);
 app.use('/profile', profileRoutes);

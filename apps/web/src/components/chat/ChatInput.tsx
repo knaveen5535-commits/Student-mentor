@@ -28,7 +28,7 @@ export function ChatInput({ onSend, disabled }: Props) {
   useEffect(() => {
     if (textareaRef.current) {
       const lineCount = (text.match(/\n/g) || []).length + 1;
-      setRows(Math.min(Math.max(lineCount, 1), 5));
+      setRows(Math.min(Math.max(lineCount, 2), 8));
     }
   }, [text]);
 
@@ -133,7 +133,7 @@ export function ChatInput({ onSend, disabled }: Props) {
           ? 'inset 0 1px 0 rgba(255,255,255,0.1), 0 0 0 4px rgba(99,102,241,0.15), 0 12px 32px rgba(0,0,0,0.3)'
           : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 16px rgba(0,0,0,0.2)',
         transition: 'all 0.25s ease',
-        overflow: 'hidden',
+        overflow: attachmentsOpen ? 'visible' : 'hidden',
       }}
     >
       {/* Textarea */}
@@ -155,17 +155,17 @@ export function ChatInput({ onSend, disabled }: Props) {
         disabled={busy}
         style={{
           width: '100%',
-          padding: '14px 16px 8px',
+          padding: '18px 20px 12px',
           background: 'transparent',
           border: 'none',
           outline: 'none',
           color: 'rgba(240,242,255,0.9)',
-          fontSize: 14,
-          lineHeight: 1.6,
+          fontSize: 16,
+          lineHeight: 1.7,
           resize: 'none',
           fontFamily: "'Inter', sans-serif",
           boxSizing: 'border-box',
-          minHeight: 52,
+          minHeight: 75,
           transition: 'all 0.2s ease',
         }}
       />
@@ -232,18 +232,19 @@ export function ChatInput({ onSend, disabled }: Props) {
               <div
                 style={{
                   position: 'absolute',
-                  bottom: 'calc(100% + 8px)',
+                  top: '100%',
                   left: 0,
-                  background: 'rgba(30, 33, 44, 0.9)',
+                  marginTop: 4,
+                  background: 'rgba(30, 33, 44, 0.95)',
                   backdropFilter: 'blur(20px) brightness(1.1)',
                   WebkitBackdropFilter: 'blur(20px) brightness(1.1)',
-                  border: '1px solid rgba(99,102,241,0.3)',
-                  borderRadius: 12,
+                  border: '1px solid rgba(99,102,241,0.4)',
+                  borderRadius: 10,
                   padding: '8px',
                   zIndex: 1000,
-                  minWidth: 180,
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
-                  animation: 'slideUp 0.2s ease-out',
+                  minWidth: 200,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+                  animation: 'slideDown 0.2s ease-out',
                 }}
               >
                 {/* File option */}

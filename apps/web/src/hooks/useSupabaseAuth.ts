@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { useUserStore } from '../store/userStore';
 
 export interface UserProfile {
   id: string;
@@ -30,7 +30,8 @@ const SESSION_STORAGE_KEY = 'ai_workspace_session';
  * Manages all authentication logic including OAuth, session persistence, and user data
  */
 export function useSupabaseAuth() {
-  const router = useRouter();
+  const storeLogin = useUserStore((s) => s.login);
+  const storeLogout = useUserStore((s) => s.logout);
   const [state, setState] = useState<AuthState>({
     user: null,
     session: null,
@@ -85,6 +86,19 @@ export function useSupabaseAuth() {
     };
   }, []);
 
+  const syncUserStore = useCallback((profile: UserProfile | null) => {
+    if (profile) {
+      storeLogin({
+        name: profile.name || undefined,
+        email: profile.email || undefined,
+        picture: profile.picture || undefined,
+        provider: profile.provider || undefined
+      });
+      return;
+    }
+    storeLogout();
+  }, [storeLogin, storeLogout]);
+
   /**
    * Initialize auth state from Supabase session
    */
@@ -112,6 +126,7 @@ export function useSupabaseAuth() {
         });
         if (userProfile) {
           saveUserToStorage(userProfile);
+          syncUserStore(userProfile);
         }
       } else {
         // No session, try to load from storage
@@ -122,12 +137,17 @@ export function useSupabaseAuth() {
           loading: false,
           error: null
         });
+        if (storedUser) {
+          syncUserStore(storedUser);
+        } else {
+          syncUserStore(null);
+        }
       }
     } catch (err) {
       console.error('❌ Auth initialization error:', err);
       setState(prev => ({ ...prev, loading: false }));
     }
-  }, [extractUserProfile, saveUserToStorage, loadStoredUser]);
+  }, [extractUserProfile, saveUserToStorage, loadStoredUser, syncUserStore]);
 
   /**
    * Setup auth state change listener
@@ -153,6 +173,7 @@ export function useSupabaseAuth() {
         });
         if (userProfile) {
           saveUserToStorage(userProfile);
+          syncUserStore(userProfile);
         }
       } else if (event === 'SIGNED_OUT') {
         // User signed out
@@ -163,6 +184,7 @@ export function useSupabaseAuth() {
           error: null
         });
         saveUserToStorage(null);
+        syncUserStore(null);
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Token was refreshed
         const userProfile = extractUserProfile(session);
@@ -171,6 +193,9 @@ export function useSupabaseAuth() {
           session: session,
           user: userProfile
         }));
+        if (userProfile) {
+          syncUserStore(userProfile);
+        }
       }
     });
 
@@ -178,7 +203,7 @@ export function useSupabaseAuth() {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [initializeAuth, extractUserProfile, saveUserToStorage]);
+  }, [initializeAuth, extractUserProfile, saveUserToStorage, syncUserStore]);
 
   /**
    * Login with Google using Supabase
@@ -234,14 +259,13 @@ export function useSupabaseAuth() {
         error: null
       });
       saveUserToStorage(null);
-      router.push('/login');
       return true;
     } catch (err) {
       console.error('❌ Logout error:', err);
       setState(prev => ({ ...prev, loading: false }));
       return false;
     }
-  }, [router, saveUserToStorage]);
+  }, [saveUserToStorage]);
 
   /**
    * Check if user is authenticated

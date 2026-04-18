@@ -2,32 +2,49 @@ import { processChatMessage, getUserThreads, getThreadDetails } from '../service
 
 export async function chatController(req, res, next) {
   try {
-    const { messages, threadId } = req.body || {};
+    console.log('Chat request body:', req.body);
+    const { messages, threadId, message } = req.body || {};
     const userEmail = req.user?.email;
 
     if (!userEmail) {
       return res.status(401).json({ error: 'User email not found in request' });
     }
 
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return res.status(400).json({ error: 'messages array is required' });
+    let userMessage = '';
+
+    if (typeof message === 'string' && message.trim()) {
+      userMessage = message.trim();
+    } else if (Array.isArray(messages) && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage?.content) {
+        userMessage = String(lastMessage.content).trim();
+      }
     }
 
-    // Get the last user message
-    const lastMessage = messages[messages.length - 1];
-    if (!lastMessage.content) {
-      return res.status(400).json({ error: 'Last message must have content' });
+    if (!userMessage) {
+      return res.status(400).json({ error: 'Message is required' });
     }
+
+    console.log('Incoming message:', userMessage);
 
     const result = await processChatMessage({
       userEmail,
       threadId,
-      userMessage: lastMessage.content
+      userMessage
     });
 
     res.json({ message: result.message, threadId: result.threadId });
   } catch (err) {
-    next(err);
+    console.error('FULL BACKEND ERROR:', err);
+    const status = err?.status || 500;
+    res.status(status).json({
+      error: err?.message || 'Unknown error',
+      details: {
+        name: err?.name,
+        message: err?.message,
+        stack: process.env.NODE_ENV === 'production' ? undefined : err?.stack
+      }
+    });
   }
 }
 

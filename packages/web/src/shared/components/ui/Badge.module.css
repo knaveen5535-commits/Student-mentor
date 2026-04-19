@@ -1,0 +1,162 @@
+/* ===== LUXURY PREMIUM BADGE COMPONENT ===== */
+/* Features: Glass Morphism + Gradients + Glow Effects */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  border-radius: 8px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: default;
+  user-select: none;
+}
+
+.badge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(245, 176, 65, 0.05) 100%
+  );
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* ===== SIZES ===== */
+
+.size-sm {
+  padding: 0.375rem 0.625rem;
+  font-size: 0.65rem;
+}
+
+.size-md {
+  padding: 0.5rem 0.875rem;
+  font-size: 0.75rem;
+}
+
+.size-lg {
+  padding: 0.75rem 1.125rem;
+  font-size: 0.85rem;
+}
+
+/* ===== VARIANTS ===== */
+
+/* Default - Neutral Glass */
+.variant-default {
+  background: rgba(122, 133, 159, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(122, 133, 159, 0.3);
+  color: var(--silver-300);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Success - Green Gradient + Glow */
+.variant-success {
+  background: linear-gradient(135deg, rgba(6, 214, 160, 0.15) 0%, rgba(6, 214, 160, 0.05) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(6, 214, 160, 0.4);
+  color: #06d6a0;
+  box-shadow: 
+    0 4px 12px rgba(6, 214, 160, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 12px rgba(6, 214, 160, 0.15);
+}
+
+/* Warning - Gold Gradient + Glow */
+.variant-warning {
+  background: linear-gradient(135deg, rgba(245, 176, 65, 0.2) 0%, rgba(245, 176, 65, 0.05) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(245, 176, 65, 0.5);
+  color: var(--gold-400);
+  box-shadow: 
+    0 4px 12px rgba(245, 176, 65, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 12px rgba(245, 176, 65, 0.2);
+}
+
+/* Danger - Fire Gradient + Glow */
+.variant-danger {
+  background: linear-gradient(135deg, rgba(255, 71, 87, 0.2) 0%, rgba(255, 71, 87, 0.05) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 71, 87, 0.4);
+  color: #ff4757;
+  box-shadow: 
+    0 4px 12px rgba(255, 71, 87, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 12px rgba(255, 71, 87, 0.15);
+}
+
+/* Info - Neon Cyan Gradient + Glow */
+.variant-info {
+  background: linear-gradient(135deg, rgba(0, 217, 255, 0.2) 0%, rgba(0, 217, 255, 0.05) 100%);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 217, 255, 0.4);
+  color: var(--neon-cyan);
+  box-shadow: 
+    0 4px 12px rgba(0, 217, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 0 15px rgba(0, 217, 255, 0.2);
+  text-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+}
+
+/* ===== HOVER/ACTIVE STATES ===== */
+
+.badge:hover {
+  transform: scale(1.05);
+
+  &.variant-success {
+    box-shadow: 
+      0 6px 16px rgba(6, 214, 160, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 16px rgba(6, 214, 160, 0.25);
+  }
+
+  &.variant-warning {
+    box-shadow: 
+      0 6px 16px rgba(245, 176, 65, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 16px rgba(245, 176, 65, 0.3);
+  }
+
+  &.variant-danger {
+    box-shadow: 
+      0 6px 16px rgba(255, 71, 87, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 16px rgba(255, 71, 87, 0.25);
+  }
+
+  &.variant-info {
+    box-shadow: 
+      0 6px 16px rgba(0, 217, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15),
+      0 0 20px rgba(0, 217, 255, 0.3);
+    text-shadow: 0 0 12px rgba(0, 217, 255, 0.5);
+  }
+}
+
+/* ===== ANIMATIONS ===== */
+
+@keyframes badge-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 4px 12px rgba(0, 217, 255, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 12px rgba(0, 217, 255, 0.15);
+  }
+  50% {
+    box-shadow: 
+      0 4px 12px rgba(0, 217, 255, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 0 20px rgba(0, 217, 255, 0.3);
+  }
+}

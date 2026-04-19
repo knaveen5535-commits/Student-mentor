@@ -33,9 +33,10 @@ export function ChatMessage({ msg }: { msg: Msg }) {
             fontSize: 16,
             flexShrink: 0,
             boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
+            overflow: 'hidden'
           }}
         >
-          🧠
+          <img src="/assets/ai_logo.png" alt="AI Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
       )}
 

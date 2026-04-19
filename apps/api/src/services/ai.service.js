@@ -1,50 +1,24 @@
-import { OpenRouter } from '@openrouter/ai';
+import { GoogleGenAI } from '@google/genai';
 
-const MODEL_NAME = 'meta-llama/llama-2-7b-chat'; // Popular OpenRouter model
+const MODEL_NAME = 'gemini-2.5-flash';
 let cachedClient = null;
 
 function getApiKey() {
-  const apiKey = (process.env.OPENROUTER_API_KEY || '').trim();
+  const apiKey = (process.env.GOOGLE_API_KEY || '').trim();
   if (!apiKey) {
-    const err = new Error('OPENROUTER_API_KEY is missing');
+    const err = new Error('GOOGLE_API_KEY is missing');
     err.status = 500;
-    console.error('AI Service: OPENROUTER_API_KEY is missing');
+    console.error('AI Service: GOOGLE_API_KEY is missing');
     throw err;
   }
-  console.log('AI Service: OPENROUTER_API_KEY is set (length:', apiKey.length + ')');
   return apiKey;
 }
 
 function getClient() {
   if (!cachedClient) {
-    cachedClient = new OpenRouter({ apiKey: getApiKey() });
+    cachedClient = new GoogleGenAI({ apiKey: getApiKey() });
   }
   return cachedClient;
-}
-
-function extractContent(result) {
-  if (!result) {
-    const err = new Error('No response object from OpenRouter');
-    err.status = 502;
-    console.error('AI Service: extractContent - No result:', result);
-    throw err;
-  }
-  
-  const content = result?.choices?.[0]?.message?.content;
-  const cleanText = typeof content === 'string' ? content.trim() : '';
-  
-  if (!cleanText) {
-    const err = new Error('Empty response from OpenRouter');
-    err.status = 502;
-    console.error('AI Service: extractContent - Empty content:', {
-      hasChoices: !!result?.choices,
-      choicesLength: result?.choices?.length,
-      message: result?.choices?.[0]?.message,
-      content
-    });
-    throw err;
-  }
-  return cleanText;
 }
 
 export async function generateResponse(prompt) {
@@ -56,62 +30,107 @@ export async function generateResponse(prompt) {
   }
 
   try {
-    console.log('AI Service: Prompt received:', { length: text.length, preview: text.substring(0, 100) });
-    const client = getClient();
-    console.log('AI Service: Creating OpenRouter request with model:', MODEL_NAME);
-    
-    const result = await client.chat.completions.create({
+    const ai = getClient();
+    const response = await ai.models.generateContent({
       model: MODEL_NAME,
-      messages: [{ role: 'user', content: text }]
+      contents: text,
+      config: {
+        systemInstruction: "You are AI Mentor, a highly advanced assistant.",
+      }
     });
-
-    const output = extractContent(result);
-    console.log('AI Service: OpenRouter response received:', { length: output.length, model: MODEL_NAME, preview: output.substring(0, 100) });
-    return output;
+    return response.text;
   } catch (err) {
-    console.error('AI Service: OpenRouter generateResponse error:', {
-      message: err?.message,
-      status: err?.status,
-      name: err?.name,
-      stack: err?.stack
-    });
+    console.error('AI Service: Google generateResponse error:', err);
     throw err;
   }
 }
 
 export async function generateChatCompletion({ messages } = {}) {
   const normalized = Array.isArray(messages) ? messages : [];
-  const payload = normalized
-    .map((message) => ({
-      role: message?.role === 'assistant' ? 'assistant' : 'user',
-      content: String(message?.content || '')
-    }))
-    .filter((entry) => entry.content.trim().length > 0);
-
-  if (payload.length === 0) {
+  
+  if (normalized.length === 0) {
     const err = new Error('messages are required');
     err.status = 400;
     throw err;
   }
 
+  // Gemini expects strict 'user'/'model' alternating history and 'user' at the very beginning (usually).
+  // Strict System Prompt logic
+  let systemText = `You are AI Mentor, a highly advanced educational assistant.
+CRITICAL RULES:
+1. You MUST ONLY answer questions related to Science, Technology, Physics, Mathematics, and Education.
+2. If the user asks about ANYTHING else (e.g. movies, cooking, sports, general chatter), you MUST politely refuse to answer and concisely remind them of your educational domain.
+3. You can analyze images, documents, and code natively. Provide insightful, structured answers.`;
+  
+  const filtered = [];
+  
+  for (const m of normalized) {
+    const content = String(m.content || '').trim();
+    if (!content) continue;
+    if (m.role === 'system') {
+      systemText = content;
+      continue;
+    }
+    
+    // Convert 'assistant' back to 'model'
+    let geminiRole = m.role === 'assistant' ? 'model' : 'user';
+    
+    // Parse possible multimodal block
+    let parts = [];
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed.text !== undefined || parsed.attachments) {
+        if (parsed.text) parts.push({ text: parsed.text });
+        if (Array.isArray(parsed.attachments)) {
+          parsed.attachments.forEach(att => {
+            parts.push({
+              inlineData: { data: att.data, mimeType: att.mimeType }
+            });
+          });
+        }
+      } else {
+        parts.push({ text: content });
+      }
+    } catch {
+      // Normal plain string
+      parts.push({ text: content });
+    }
+    
+    // To handle consecutive same roles (which Gemini rejects), try merging texts
+    if (filtered.length > 0 && filtered[filtered.length - 1].role === geminiRole) {
+      // Just push new parts into the existing role block
+      filtered[filtered.length - 1].parts.push(...parts);
+    } else {
+      filtered.push({
+        role: geminiRole,
+        parts: parts
+      });
+    }
+  }
+
+  // Gemini must start with 'user'
+  if (filtered.length > 0 && filtered[0].role === 'model') {
+     filtered.shift();
+  }
+
+  if (filtered.length === 0) {
+    throw new Error('No valid user messages found');
+  }
+
   try {
-    console.log('AI Service: Chat completion request with', payload.length, 'messages');
-    const client = getClient();
-    const result = await client.chat.completions.create({
+    const ai = getClient();
+    
+    const response = await ai.models.generateContent({
       model: MODEL_NAME,
-      messages: payload
+      contents: filtered,
+      config: {
+        systemInstruction: systemText,
+      }
     });
 
-    const output = extractContent(result);
-    console.log('AI Service: OpenRouter chat response received:', { length: output.length, model: MODEL_NAME, preview: output.substring(0, 100) });
-    return { role: 'assistant', content: output };
+    return { role: 'assistant', content: response.text };
   } catch (err) {
-    console.error('AI Service: OpenRouter generateChatCompletion error:', {
-      message: err?.message,
-      status: err?.status,
-      name: err?.name,
-      stack: err?.stack
-    });
+    console.error('AI Service: Google generateChatCompletion error:', err);
     throw err;
   }
 }

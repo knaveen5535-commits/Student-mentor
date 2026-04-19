@@ -10,8 +10,8 @@
     "build": "echo 'no build step'"
   },
   "dependencies": {
+    "@google/genai": "^1.50.1",
     "@supabase/supabase-js": "^2.49.1",
-    "@openrouter/ai": "^1.5.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.18.2",

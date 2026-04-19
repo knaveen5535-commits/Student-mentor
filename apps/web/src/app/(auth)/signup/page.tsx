@@ -22,6 +22,10 @@ export default function SignupPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
+  // 3D Tilt state
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [transform, setTransform] = useState('rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)');
+
   const usernameValid = username.trim().length > 0;
   const emailValid = email.trim().length > 0;
   const passwordValid = password.length > 0;
@@ -29,7 +33,6 @@ export default function SignupPage() {
 
   const shouldRedirect = !!session || !!user;
 
-  // Check if already logged in with Supabase
   useEffect(() => {
     if (!authLoading && shouldRedirect && !redirectingRef.current) {
       redirectingRef.current = true;
@@ -37,21 +40,30 @@ export default function SignupPage() {
     }
   }, [authLoading, shouldRedirect, router]);
 
+  // Handle 3D Tilt effect
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left; // x position within the element.
+    const y = e.clientY - rect.top;  // y position within the element.
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    // Calculate rotation (-10 to 10 degrees max)
+    const rotateX = ((y - centerY) / centerY) * -10;
+    const rotateY = ((x - centerX) / centerX) * 10;
+    
+    setTransform(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`);
+  };
+
+  const handleMouseLeave = () => {
+    setTransform('perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)');
+  };
+
   if (authLoading || shouldRedirect) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0a0b0f',
-          color: 'rgba(240,242,255,0.6)',
-          fontSize: 14,
-          letterSpacing: '0.05em'
-        }}
-      >
-        Loading...
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#050508', color: '#a5b4fc' }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', border: '3px solid rgba(165,180,252,0.3)', borderTopColor: '#a5b4fc', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
@@ -80,9 +92,7 @@ export default function SignupPage() {
         password
       });
 
-      if (signUpError) {
-        throw signUpError;
-      }
+      if (signUpError) throw signUpError;
 
       if (data.user) {
         const { error: insertError } = await supabase
@@ -93,9 +103,7 @@ export default function SignupPage() {
             email: email.trim()
           });
 
-        if (insertError) {
-          throw insertError;
-        }
+        if (insertError) throw insertError;
       }
 
       if (data.session) {
@@ -109,41 +117,28 @@ export default function SignupPage() {
         return;
       }
 
-      setSuccess('Account created. You can log in now.');
+      setSuccess('Identity registered in the Neural Net. Proceed to authentication.');
       setLoading(false);
     } catch (err) {
-      const message = (err as Error).message || 'Signup failed. Please try again.';
-      if (message.toLowerCase().includes('rate limit')) {
-        setError('Too many signup attempts. Please wait a few minutes and try again.');
-      } else {
-        setError(message);
-      }
+      const message = (err as Error).message || 'Registration anomaly detected. Retry.';
+      setError(message.toLowerCase().includes('rate limit') ? 'Too many queries. Cooldown required.' : message);
       setLoading(false);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && canSubmit) {
-      handleSubmit();
     }
   };
 
   const inputStyle = (focused: boolean) => ({
-    paddingLeft: 16,
-    paddingRight: 16,
-    height: 50,
-    fontSize: 15,
     width: '100%',
-    borderWidth: 1.5,
-    borderStyle: 'solid',
-    borderColor: focused ? '#3b82f6' : '#374151',
-    borderRadius: 12,
-    background: '#111827',
-    color: '#f9fafb',
-    transition: 'all 0.2s ease',
-    boxShadow: focused ? '0 0 0 3px rgba(59,130,246,0.25)' : 'none',
-    fontFamily: 'inherit',
-    boxSizing: 'border-box'
+    padding: '16px 20px',
+    background: focused ? 'rgba(20, 20, 25, 0.9)' : 'rgba(15, 15, 20, 0.6)',
+    border: '1px solid',
+    borderColor: focused ? 'rgba(99, 102, 241, 0.8)' : 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 16,
+    color: '#e0e7ff',
+    fontSize: 15,
+    outline: 'none',
+    transition: 'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+    boxShadow: focused ? '0 0 0 4px rgba(99, 102, 241, 0.15), inset 0 2px 4px rgba(0,0,0,0.4)' : 'inset 0 2px 4px rgba(0,0,0,0.2)',
+    boxSizing: 'border-box' as const
   });
 
   return (
@@ -153,338 +148,226 @@ export default function SignupPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%)',
-        backgroundSize: '400% 400%',
-        animation: 'gradientShift 15s ease infinite',
-        padding: '20px',
-        position: 'relative'
+        background: '#050508',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: "'Inter', sans-serif"
       }}
     >
-      {/* Login Link - Top Right */}
+      {/* Immersive Dark Mesh Background */}
       <div
         style={{
           position: 'absolute',
-          top: 24,
-          right: 24,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8
+          inset: 0,
+          background: `
+            radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.15), transparent 50%),
+            radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.15), transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(45, 212, 191, 0.08), transparent 60%)
+          `,
+          filter: 'blur(60px)',
+          animation: 'pulse-bg 15s alternate infinite ease-in-out',
         }}
-      >
-        <span style={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: 14, fontWeight: 500 }}>
-          Already have an account?
-        </span>
+      />
+      
+      {/* Grid Pattern */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+          transform: 'perspective(1000px) rotateX(60deg) translateY(-100px) translateZ(-200px)',
+          transformOrigin: 'top center',
+          opacity: 0.6,
+        }}
+      />
+
+      <div style={{ position: 'absolute', top: 32, right: 32, zIndex: 10 }}>
         <Link
           href="/login"
           style={{
-            padding: '10px 20px',
-            background: 'rgba(255, 255, 255, 0.95)',
-            color: '#667eea',
+            padding: '12px 24px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            backdropFilter: 'blur(20px)',
+            color: '#a5b4fc',
+            fontWeight: 600,
             fontSize: 14,
-            fontWeight: 700,
-            borderRadius: 10,
+            borderRadius: 999,
             textDecoration: 'none',
+            border: '1px solid rgba(255,255,255,0.1)',
             transition: 'all 0.3s ease',
-            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
-            cursor: 'pointer'
+            display: 'block'
           }}
           onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.1)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(165, 180, 252, 0.5)';
             (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)';
           }}
           onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'rgba(255, 255, 255, 0.05)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.1)';
             (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-            (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.1)';
           }}
         >
-          Sign In
+          Access Terminal (Login) →
         </Link>
       </div>
 
-      <div style={{ maxWidth: 520, width: '100%' }}>
-        {/* Header Section */}
-        <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <div
-            style={{
-              fontSize: 60,
-              marginBottom: 16,
-              animation: 'bounce 2s ease-in-out infinite'
-            }}
-          >
-            ✨
-          </div>
-          <h1 style={{ 
-            fontSize: 42, 
-            fontWeight: 800, 
-            marginBottom: 8,
-            color: '#fff',
-            textShadow: '0 4px 12px rgba(0,0,0,0.2)'
-          }}>
-            Join AI Mentor
-          </h1>
-          <p style={{ 
-            opacity: 0.95, 
-            fontSize: 16,
-            color: '#fff',
-            fontWeight: 500
-          }}>
-            Create your account to start learning
-          </p>
-        </div>
-
-        {/* Card Container */}
+      <div 
+        style={{ perspective: 1200, zIndex: 10, padding: 20, width: '100%', maxWidth: 480 }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
         <div
+          ref={cardRef}
           style={{
-            padding: 40,
-            background: 'rgba(255, 255, 255, 0.95)',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            borderRadius: 20,
-            backdropFilter: 'blur(10px)'
+            background: 'rgba(12, 13, 18, 0.7)',
+            backdropFilter: 'blur(40px)',
+            WebkitBackdropFilter: 'blur(40px)',
+            borderRadius: 32,
+            padding: 48,
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 30px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+            transformStyle: 'preserve-3d',
+            transition: 'transform 0.1s ease-out',
+            transform: transform,
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Username Input */}
-            <div>
-              <label style={{ 
-                fontSize: 13, 
-                fontWeight: 600, 
-                color: '#e5e7eb',
-                display: 'block', 
-                marginBottom: 8,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Username
-              </label>
+          {/* Holographic Header */}
+          <div style={{ textAlign: 'center', marginBottom: 40, transform: 'translateZ(40px)' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: 20,
+              background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
+              border: '1px solid rgba(165,180,252,0.4)',
+              margin: '0 auto 24px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 32, boxShadow: '0 0 30px rgba(99,102,241,0.3)',
+              position: 'relative'
+            }}>
+              <img src="/assets/ai_logo.png" alt="AI Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'relative', zIndex: 2, borderRadius: 20 }} />
+              {/* Glow ring */}
+              <div style={{
+                position: 'absolute', inset: -4, borderRadius: 24, border: '1px solid rgba(99,102,241,0.5)',
+                animation: 'spin 4s linear infinite', opacity: 0.5
+              }}/>
+            </div>
+            <h1 style={{ fontSize: 32, fontWeight: 800, color: '#e0e7ff', marginBottom: 8, letterSpacing: -0.5 }}>
+              Initialize Identity
+            </h1>
+            <p style={{ color: 'rgba(165, 180, 252, 0.6)', fontSize: 15, fontWeight: 500 }}>
+              Connect your neural pathways into the AI Mentor network.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24, transform: 'translateZ(30px)' }}>
+            {/* Input Groups */}
+            <div style={{ position: 'relative' }}>
               <input
                 type="text"
-                placeholder="Your username"
+                placeholder="Callsign (Username)"
                 value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  setError(null);
-                  setSuccess(null);
-                }}
+                onChange={(e) => { setUsername(e.target.value); setError(null); }}
                 onFocus={() => setFocusedField('username')}
                 onBlur={() => setFocusedField(null)}
-                onKeyPress={handleKeyPress}
-                className="auth-input"
                 style={inputStyle(focusedField === 'username')}
               />
             </div>
-
-            {/* Email Input */}
-            <div>
-              <label style={{ 
-                fontSize: 13, 
-                fontWeight: 600, 
-                color: '#e5e7eb',
-                display: 'block', 
-                marginBottom: 8,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Email
-              </label>
+            
+            <div style={{ position: 'relative' }}>
               <input
                 type="email"
-                placeholder="you@example.com"
+                placeholder="Neural Link (Email)"
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setError(null);
-                  setSuccess(null);
-                }}
+                onChange={(e) => { setEmail(e.target.value); setError(null); }}
                 onFocus={() => setFocusedField('email')}
                 onBlur={() => setFocusedField(null)}
-                onKeyPress={handleKeyPress}
-                className="auth-input"
                 style={inputStyle(focusedField === 'email')}
               />
             </div>
 
-            {/* Password Input */}
-            <div>
-              <label style={{ 
-                fontSize: 13, 
-                fontWeight: 600, 
-                color: '#e5e7eb',
-                display: 'block', 
-                marginBottom: 8,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px'
-              }}>
-                Password
-              </label>
+            <div style={{ position: 'relative' }}>
               <input
                 type="password"
-                placeholder="••••••••"
+                placeholder="Access Code (Password)"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  setError(null);
-                  setSuccess(null);
-                }}
+                onChange={(e) => { setPassword(e.target.value); setError(null); }}
                 onFocus={() => setFocusedField('password')}
                 onBlur={() => setFocusedField(null)}
-                onKeyPress={handleKeyPress}
-                className="auth-input"
                 style={inputStyle(focusedField === 'password')}
               />
             </div>
 
-            {/* Error Message */}
-            {error ? (
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 12,
-                  background: 'rgba(220, 38, 38, 0.1)',
-                  color: '#dc2626',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  animation: 'slideIn 0.3s ease-out',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8
-                }}
-              >
-                ⚠️ {error}
+            {/* Response Messages */}
+            {error && (
+              <div style={{ padding: 16, borderRadius: 16, background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#fca5a5', fontSize: 14, fontWeight: 600, animation: 'fadeInDown 0.3s', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>⚠️</span> {error}
               </div>
-            ) : null}
-
-            {/* Success Message */}
-            {success ? (
-              <div
-                style={{
-                  padding: 14,
-                  borderRadius: 12,
-                  background: 'rgba(16, 185, 129, 0.12)',
-                  color: '#10b981',
-                  fontSize: 14,
-                  fontWeight: 600,
-                  animation: 'slideIn 0.3s ease-out',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8
-                }}
-              >
-                ✅ {success}
+            )}
+            {success && (
+              <div style={{ padding: 16, borderRadius: 16, background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#6ee7b7', fontSize: 14, fontWeight: 600, animation: 'fadeInDown 0.3s', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>✅</span> {success}
               </div>
-            ) : null}
+            )}
 
-            {/* Submit Button */}
+            {/* Glowing Submit Button */}
             <button
               onClick={handleSubmit}
               disabled={!canSubmit}
               style={{
-                height: 50,
+                marginTop: 8,
+                width: '100%',
+                padding: '18px',
+                borderRadius: 16,
+                background: canSubmit && !loading
+                  ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                  : 'rgba(255,255,255,0.05)',
+                color: canSubmit && !loading ? '#fff' : 'rgba(255,255,255,0.3)',
+                border: canSubmit && !loading ? 'none' : '1px solid rgba(255,255,255,0.1)',
                 fontSize: 16,
                 fontWeight: 700,
-                borderRadius: 12,
-                border: 'none',
-                background: canSubmit && !loading 
-                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  : 'linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%)',
-                color: '#fff',
+                letterSpacing: 1,
+                textTransform: 'uppercase',
                 cursor: canSubmit && !loading ? 'pointer' : 'not-allowed',
+                position: 'relative',
+                overflow: 'hidden',
                 transition: 'all 0.3s ease',
-                opacity: canSubmit && !loading ? 1 : 0.7,
-                textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                boxShadow: canSubmit && !loading 
-                  ? '0 8px 20px rgba(102, 126, 234, 0.3)' 
-                  : 'none'
+                boxShadow: canSubmit && !loading ? '0 10px 30px rgba(99,102,241,0.5)' : 'none',
               }}
               onMouseEnter={(e) => {
                 if (canSubmit && !loading) {
                   (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)';
-                  (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 12px 30px rgba(102, 126, 234, 0.4)';
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 15px 40px rgba(99,102,241,0.6)';
                 }
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = 
-                  canSubmit && !loading ? '0 8px 20px rgba(102, 126, 234, 0.3)' : 'none';
+                if (canSubmit && !loading) {
+                  (e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)';
+                  (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 10px 30px rgba(99,102,241,0.5)';
+                }
               }}
             >
               {loading ? (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-                  <span
-                    style={{
-                      width: 18,
-                      height: 18,
-                      border: '3px solid rgba(255,255,255,0.3)',
-                      borderTop: '3px solid #fff',
-                      borderRadius: '50%',
-                      animation: 'spin 0.8s linear infinite'
-                    }}
-                  />
-                  Creating account...
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                  <div style={{ width: 20, height: 20, border: '3px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                  Processing...
+                </div>
               ) : (
-                '🚀 Create Account'
+                'Establish Connection'
               )}
             </button>
-
-            {/* Footer Info */}
-            <div
-              style={{
-                textAlign: 'center',
-                fontSize: 11,
-                opacity: 0.6,
-                lineHeight: 1.6,
-                color: '#6b7280',
-                paddingTop: 12,
-                borderTop: '1px solid rgba(0,0,0,0.05)'
-              }}
-            >
-              <p style={{ margin: 0, marginBottom: 4 }}>By creating an account, you agree to our Terms</p>
-              <p style={{ margin: 0 }}>🔐 Your data is encrypted and stays in your browser</p>
-            </div>
           </div>
         </div>
       </div>
 
       <style>{`
-        .auth-input::placeholder {
-          color: rgba(148, 163, 184, 0.75);
+        input::placeholder { color: rgba(165, 180, 252, 0.4); }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes pulse-bg {
+          0% { opacity: 0.8; transform: scale(1); }
+          100% { opacity: 1; transform: scale(1.05); }
         }
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-12px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        @keyframes spin {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-        @keyframes bounce {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-10px);
-          }
-        }
-        @keyframes gradientShift {
-          0% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
-          100% {
-            background-position: 0% 50%;
-          }
+        @keyframes fadeInDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>

@@ -6,8 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useUserStore } from '../../store/userStore';
 import { useChatStore } from '../../store/chatStore';
 import { useSupabaseAuth } from '../../hooks/useSupabaseAuth';
+import { apiFetch } from '../../lib/api';
 
-/* ─────────────────── Nav items ────────────────── */
 const NAV_ITEMS = [
   { href: '/chat',      label: 'Chat',       icon: '💬', desc: 'AI conversations' },
   { href: '/projects',  label: 'Projects',   icon: '📁', desc: 'Your projects'    },
@@ -15,132 +15,131 @@ const NAV_ITEMS = [
   { href: '/profile',   label: 'Profile',    icon: '👤', desc: 'Account settings' },
 ];
 
-function SidebarNav({
-  href,
-  label,
-  icon,
-  desc,
-  collapsed,
-  onClick,
-}: {
-  href: string;
-  label: string;
-  icon: string;
-  desc: string;
-  collapsed: boolean;
-  onClick?: () => void;
-}) {
+function BottomDock() {
   const pathname = usePathname();
-  const active = pathname === href || pathname.startsWith(href + '/');
-  const [hovering, setHovering] = useState(false);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      title={collapsed ? label : undefined}
-      onMouseEnter={() => setHovering(true)}
-      onMouseLeave={() => setHovering(false)}
+    <div
       style={{
+        position: 'fixed',
+        bottom: 24,
+        left: '50%',
+        transform: 'translateX(-50%)',
         display: 'flex',
-        alignItems: 'center',
-        gap: collapsed ? 0 : 12,
-        padding: collapsed ? '13px' : '12px 14px',
-        borderRadius: 12,
-        transition: 'all 0.2s ease',
-        textDecoration: 'none',
-        position: 'relative',
-        overflow: 'hidden',
-        justifyContent: collapsed ? 'center' : 'flex-start',
-        background: active
-          ? 'linear-gradient(135deg, rgba(99,102,241,0.25) 0%, rgba(139,92,246,0.15) 100%)'
-          : hovering
-          ? 'rgba(255,255,255,0.05)'
-          : 'transparent',
-        border: active
-          ? '1px solid rgba(99,102,241,0.3)'
-          : '1px solid transparent',
-        boxShadow: active ? '0 4px 16px rgba(99,102,241,0.12)' : 'none',
+        alignItems: 'flex-end',
+        gap: 12,
+        padding: '12px 24px',
+        background: 'rgba(20, 20, 25, 0.6)',
+        backdropFilter: 'blur(30px) saturate(1.5)',
+        WebkitBackdropFilter: 'blur(30px) saturate(1.5)',
+        borderRadius: 32,
+        border: '1px solid rgba(255,255,255,0.1)',
+        boxShadow: '0 20px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+        zIndex: 50,
       }}
     >
-      {/* Active indicator bar */}
-      {active && (
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: '20%',
-            bottom: '20%',
-            width: 3,
-            background: 'linear-gradient(180deg, #6366f1, #a78bfa)',
-            borderRadius: '0 3px 3px 0',
-          }}
-        />
-      )}
+      {NAV_ITEMS.map((item, idx) => {
+        const active = pathname === item.href || pathname.startsWith(item.href + '/');
+        // Simple scale effect mimicking macOS dock
+        const distance = hoveredIdx !== null ? Math.abs(hoveredIdx - idx) : 2;
+        const scale = hoveredIdx === idx ? 1.4 : distance === 1 ? 1.15 : 1;
+        const margin = hoveredIdx === idx ? '0 12px' : distance === 1 ? '0 6px' : '0 0';
 
-      {/* Icon */}
-      <span
-        style={{
-          fontSize: 20,
-          flexShrink: 0,
-          filter: active ? 'drop-shadow(0 0 8px rgba(99,102,241,0.6))' : 'none',
-          transition: 'filter 0.2s ease',
-        }}
-      >
-        {icon}
-      </span>
-
-      {/* Label + desc */}
-      {!collapsed && (
-        <div style={{ minWidth: 0 }}>
-          <div
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onMouseEnter={() => setHoveredIdx(idx)}
+            onMouseLeave={() => setHoveredIdx(null)}
             style={{
-              fontSize: 14,
-              fontWeight: active ? 600 : 500,
-              color: active ? '#c4b5fd' : 'rgba(240,242,255,0.75)',
-              lineHeight: 1.2,
-              whiteSpace: 'nowrap',
+              position: 'relative',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textDecoration: 'none',
+              transition: 'all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              transform: `scale(${scale}) translateY(${hoveredIdx === idx ? -10 : 0}px)`,
+              margin: margin,
+              zIndex: hoveredIdx === idx ? 10 : 1,
             }}
           >
-            {label}
-          </div>
-          <div
-            style={{
-              fontSize: 11,
-              color: 'rgba(240,242,255,0.3)',
-              marginTop: 1,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {desc}
-          </div>
-        </div>
-      )}
-    </Link>
+            {/* Tooltip */}
+            {hoveredIdx === idx && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: -40,
+                  background: 'rgba(0,0,0,0.8)',
+                  color: '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  padding: '4px 10px',
+                  borderRadius: 8,
+                  whiteSpace: 'nowrap',
+                  pointerEvents: 'none',
+                  animation: 'fadeIn 0.2s ease-out',
+                }}
+              >
+                {item.label}
+              </div>
+            )}
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 20,
+                background: active
+                  ? 'linear-gradient(135deg, rgba(99,102,241,0.5), rgba(139,92,246,0.3))'
+                  : 'rgba(255,255,255,0.05)',
+                border: active
+                  ? '2px solid rgba(165,180,252,0.5)'
+                  : '1px solid rgba(255,255,255,0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24,
+                boxShadow: active ? '0 8px 24px rgba(99,102,241,0.4)' : 'none',
+                backdropFilter: 'blur(10px)',
+              }}
+            >
+              <span style={{ filter: active ? 'drop-shadow(0 0 8px rgba(255,255,255,0.8))' : 'none' }}>
+                {item.icon}
+              </span>
+            </div>
+            {/* Active dot */}
+            {active && (
+              <div
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: '#a5b4fc',
+                  marginTop: 6,
+                  boxShadow: '0 0 8px #a5b4fc',
+                }}
+              />
+            )}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 
-/* ─────────────────── Sidebar ──────────────────── */
-function Sidebar({
-  collapsed,
-  onToggle,
+function TopHUD({
   user,
-  logout,
+  onToggleDrawer,
+  drawerOpen
 }: {
-  collapsed: boolean;
-  onToggle: () => void;
   user: any;
-  logout: () => void;
+  onToggleDrawer: () => void;
+  drawerOpen: boolean;
 }) {
   const [time, setTime] = useState('');
-  const [showChats, setShowChats] = useState(false);
-  const threads = useChatStore((s) => s.threads);
-  const pathname = usePathname();
-
   useEffect(() => {
     const update = () => {
-      const now = new Date();
-      setTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     };
     update();
     const id = setInterval(update, 1000);
@@ -148,618 +147,346 @@ function Sidebar({
   }, []);
 
   const avatarLetter = (user?.name || user?.email || 'U')[0].toUpperCase();
-  const hue = ((avatarLetter.charCodeAt(0) - 65) / 26) * 360;
 
   return (
     <div
       style={{
-        width: collapsed ? 72 : 264,
-        height: '100vh',
-        flexShrink: 0,
-        background: 'rgba(14, 15, 20, 0.98)',
-        backdropFilter: 'blur(40px) brightness(1.05)',
-        WebkitBackdropFilter: 'blur(40px) brightness(1.05)',
-        borderRight: '1px solid rgba(99, 102, 241, 0.2)',
+        position: 'fixed',
+        top: 24,
+        left: 24,
+        right: 24,
+        height: 64,
         display: 'flex',
-        flexDirection: 'column',
-        transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'hidden',
-        position: 'sticky',
-        top: 0,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0 24px',
+        background: 'rgba(15, 15, 20, 0.4)',
+        backdropFilter: 'blur(30px)',
+        WebkitBackdropFilter: 'blur(30px)',
+        borderRadius: 24,
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.05)',
         zIndex: 50,
-        boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.08)',
       }}
     >
-      {/* Top: Logo + toggle */}
+      {/* Logo Area */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div
+          style={{
+            width: 36,
+            height: 36,
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 18,
+            boxShadow: '0 4px 16px rgba(99,102,241,0.5)',
+            overflow: 'hidden'
+          }}
+        >
+          <img src="/assets/ai_logo.png" alt="AI Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 16, color: '#e0e7ff', letterSpacing: 0.5 }}>
+            AI MENTOR
+          </div>
+          <div style={{ fontSize: 11, color: 'rgba(240,242,255,0.5)', fontWeight: 500, letterSpacing: 1 }}>
+            WORKSPACE
+          </div>
+        </div>
+      </div>
+
+      {/* Clock & Status */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: collapsed ? 'center' : 'space-between',
-          padding: collapsed ? '20px 0' : '20px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
-          flexShrink: 0,
-          minHeight: 70,
+          gap: 16,
+          background: 'rgba(0,0,0,0.2)',
+          padding: '6px 16px',
+          borderRadius: 999,
+          border: '1px solid rgba(255,255,255,0.05)'
         }}
       >
-        {!collapsed && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 18,
-                boxShadow: '0 4px 12px rgba(99,102,241,0.4)',
-                flexShrink: 0,
-              }}
-            >
-              🧠
-            </div>
-            <span
-              style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 700,
-                fontSize: 16,
-                background: 'linear-gradient(135deg, #e0e7ff, #a5b4fc)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              AI Mentor
-            </span>
-          </div>
-        )}
-
-        {collapsed && (
-          <div
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 18,
-            }}
-          >
-            🧠
-          </div>
-        )}
-
-        {!collapsed && (
-          <button
-            id="sidebar-collapse-toggle"
-            onClick={onToggle}
-            title="Collapse sidebar"
-            style={{
-              width: 30,
-              height: 30,
-              borderRadius: 8,
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(240,242,255,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              fontSize: 14,
-              transition: 'all 0.2s ease',
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background = 'rgba(99,102,241,0.15)';
-              el.style.color = '#a5b4fc';
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background = 'rgba(255,255,255,0.05)';
-              el.style.color = 'rgba(240,242,255,0.5)';
-            }}
-          >
-            ◀
-          </button>
-        )}
-
-        {collapsed && (
-          <button
-            style={{ display: 'none' }}
-            onClick={onToggle}
-          />
-        )}
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(240,242,255,0.9)' }}>
+          {time}
+        </span>
+        <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.2)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981', animation: 'pulse-glow 2s infinite' }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#34d399' }}>CORE ONLINE</span>
+        </div>
       </div>
 
-      {/* Expand button when collapsed */}
-      {collapsed && (
-        <button
-          id="sidebar-expand-toggle"
-          onClick={onToggle}
-          title="Expand sidebar"
+      {/* Right Controls */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <Link
+          href="/chat"
           style={{
-            margin: '8px auto',
-            width: 40,
-            height: 30,
+            padding: '8px 16px',
+            borderRadius: 12,
+            background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
+            border: '1px solid rgba(99,102,241,0.4)',
+            color: '#a5b4fc',
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.4), rgba(139,92,246,0.4))';
+            (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))';
+            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+          }}
+        >
+          <span style={{ fontSize: 16 }}>+</span> New Chat
+        </Link>
+        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)' }} />
+        
+        <button
+          onClick={onToggleDrawer}
+          style={{
+            background: drawerOpen ? 'rgba(99,102,241,0.3)' : 'transparent',
+            border: 'none',
+            color: drawerOpen ? '#a5b4fc' : 'rgba(240,242,255,0.7)',
+            fontSize: 20,
+            cursor: 'pointer',
+            padding: 8,
             borderRadius: 8,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            color: 'rgba(240,242,255,0.4)',
+            transition: 'all 0.2s',
+          }}
+        >
+          {drawerOpen ? '📖' : '📚'}
+        </button>
+
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 10,
+            background: 'linear-gradient(135deg, #3b82f6, #2dd4bf)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            cursor: 'pointer',
-            fontSize: 12,
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'rgba(99,102,241,0.15)';
-            el.style.color = '#a5b4fc';
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'rgba(255,255,255,0.04)';
-            el.style.color = 'rgba(240,242,255,0.4)';
+            fontSize: 14,
+            fontWeight: 700,
+            color: '#fff',
+            border: '2px solid rgba(255,255,255,0.2)'
           }}
         >
-          ▶
-        </button>
-      )}
-
-      {/* Nav */}
-      <nav
-        style={{
-          flex: 1,
-          padding: collapsed ? '8px 8px' : '12px 10px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 4,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        }}
-      >
-        {!collapsed && (
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: 'rgba(240,242,255,0.25)',
-              padding: '4px 14px 8px',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span>Navigation</span>
-            <button
-              onClick={() => setShowChats(!showChats)}
-              title="Toggle chats"
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 6,
-                background: showChats ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#fff',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 8px rgba(99,102,241,0.3)',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.transform = 'scale(1.1)';
-                el.style.boxShadow = '0 4px 12px rgba(99,102,241,0.5)';
-              }}
-              onMouseLeave={(e) => {
-                const el = e.currentTarget as HTMLElement;
-                el.style.transform = 'scale(1)';
-                el.style.boxShadow = '0 2px 8px rgba(99,102,241,0.3)';
-              }}
-            >
-              +
-            </button>
-          </div>
-        )}
-
-        {collapsed && (
-          <button
-            onClick={() => setShowChats(!showChats)}
-            title="Toggle chats"
-            style={{
-              width: 36,
-              height: 36,
-              marginLeft: 'auto',
-              marginRight: 'auto',
-              marginTop: 4,
-              marginBottom: 4,
-              borderRadius: 8,
-              background: showChats ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 16,
-              fontWeight: 700,
-              color: '#fff',
-              transition: 'all 0.2s ease',
-              boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.transform = 'scale(1.1)';
-              el.style.boxShadow = '0 6px 16px rgba(99,102,241,0.5)';
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.transform = 'scale(1)';
-              el.style.boxShadow = '0 4px 12px rgba(99,102,241,0.3)';
-            }}
-          >
-            +
-          </button>
-        )}
-
-        {showChats ? (
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              maxHeight: 300,
-              overflowY: 'auto',
-              paddingRight: 4,
-            }}
-          >
-            {threads.length === 0 ? (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: 'rgba(240,242,255,0.3)',
-                  padding: '12px',
-                  textAlign: 'center',
-                }}
-              >
-                No chats yet
-              </div>
-            ) : (
-              threads.map((t) => {
-                const active = pathname === `/chat/${t.id}`;
-                return (
-                  <Link
-                    key={t.id}
-                    href={`/chat/${t.id}`}
-                    style={{
-                      padding: collapsed ? '8px' : '10px 12px',
-                      borderRadius: 8,
-                      background: active
-                        ? 'rgba(99,102,241,0.2)'
-                        : 'transparent',
-                      border: active
-                        ? '1px solid rgba(99,102,241,0.3)'
-                        : '1px solid transparent',
-                      color: active ? '#a5b4fc' : 'rgba(240,242,255,0.6)',
-                      fontSize: 12,
-                      textDecoration: 'none',
-                      transition: 'all 0.2s ease',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block',
-                    }}
-                    onMouseEnter={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      if (!active) {
-                        el.style.background = 'rgba(255,255,255,0.05)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      const el = e.currentTarget as HTMLElement;
-                      if (!active) {
-                        el.style.background = 'transparent';
-                      }
-                    }}
-                  >
-                    {collapsed ? '💬' : t.title || 'Chat'}
-                  </Link>
-                );
-              })
-            )}
-          </div>
-        ) : null}
-
-        {!showChats && (
-          <>
-            {NAV_ITEMS.map((item) => (
-              <SidebarNav key={item.href} {...item} collapsed={collapsed} />
-            ))}
-          </>
-        )}
-      </nav>
-
-      {/* Bottom: User info + logout */}
-      <div
-        style={{
-          borderTop: '1px solid rgba(255,255,255,0.05)',
-          padding: collapsed ? '12px 8px' : '12px 10px',
-          flexShrink: 0,
-        }}
-      >
-        {!collapsed && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              padding: '10px 12px',
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.05)',
-              marginBottom: 8,
-            }}
-          >
-            {/* Avatar */}
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 10,
-                background: `linear-gradient(135deg, hsl(${hue},70%,55%), hsl(${(hue + 40) % 360},70%,45%))`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 14,
-                fontWeight: 700,
-                color: '#fff',
-                flexShrink: 0,
-              }}
-            >
-              {avatarLetter}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: 'rgba(240,242,255,0.9)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {user?.name || 'User'}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: 'rgba(240,242,255,0.35)',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {user?.email || ''}
-              </div>
-            </div>
-            {/* live clock */}
-            <div style={{ fontSize: 11, color: 'rgba(240,242,255,0.3)', whiteSpace: 'nowrap' }}>
-              {time}
-            </div>
-          </div>
-        )}
-
-        {/* Logout */}
-        <button
-          id="sidebar-logout"
-          onClick={logout}
-          style={{
-            width: '100%',
-            padding: collapsed ? '11px' : '10px 12px',
-            borderRadius: 10,
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.15)',
-            color: 'rgba(252,165,165,0.8)',
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'center',
-            gap: 8,
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'rgba(239,68,68,0.18)';
-            el.style.borderColor = 'rgba(239,68,68,0.35)';
-            el.style.color = '#fca5a5';
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'rgba(239,68,68,0.08)';
-            el.style.borderColor = 'rgba(239,68,68,0.15)';
-            el.style.color = 'rgba(252,165,165,0.8)';
-          }}
-        >
-          <span>🚪</span>
-          {!collapsed && 'Sign Out'}
-        </button>
+          {avatarLetter}
+        </div>
       </div>
     </div>
   );
 }
 
-/* ─────────────────── Header ──────────────────── */
-function WorkspaceHeader({
-  onMenuClick,
-  user,
+function RightDrawer({
+  open,
+  onClose,
+  logout
 }: {
-  onMenuClick: () => void;
-  user: any;
+  open: boolean;
+  onClose: () => void;
+  logout: () => void;
 }) {
+  const threads = useChatStore((s) => s.threads);
+  const deleteThreadLocal = useChatStore((s) => s.deleteThread);
+  const profile = useUserStore((s) => s.profile);
   const pathname = usePathname();
-  const currentPage = NAV_ITEMS.find(
-    (n) => pathname === n.href || pathname.startsWith(n.href + '/')
-  );
+  const router = useRouter();
+
+  const handleDelete = async (e: React.MouseEvent, threadId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Optimistically remove from UI
+    deleteThreadLocal(threadId);
+
+    // If we are currently on this chat, redirect away
+    if (pathname === `/chat/${threadId}`) {
+      router.push('/chat');
+    }
+
+    try {
+      if (profile?.email) {
+        await apiFetch(`/chat/threads/${threadId}`, {
+          method: 'DELETE',
+          userEmail: profile.email
+        });
+      }
+    } catch (err) {
+      console.error('Failed to delete thread:', err);
+    }
+  };
 
   return (
-    <header
-      style={{
-        height: 60,
-        background: 'rgba(10,11,15,0.85)',
-        backdropFilter: 'blur(40px) brightness(1.08)',
-        WebkitBackdropFilter: 'blur(40px) brightness(1.08)',
-        borderBottom: '1px solid rgba(99, 102, 241, 0.15)',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 20px',
-        gap: 14,
-        position: 'sticky',
-        top: 0,
-        zIndex: 40,
-        flexShrink: 0,
-        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.2)',
-      }}
-    >
-      {/* Mobile hamburger */}
-      <button
-        id="header-menu-btn"
-        onClick={onMenuClick}
+    <>
+      <div
+        onClick={onClose}
         style={{
-          display: 'none',
-          width: 36,
-          height: 36,
-          borderRadius: 8,
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          fontSize: 16,
-          color: 'rgba(240,242,255,0.7)',
-          flexShrink: 0,
-          transition: 'all 0.2s ease',
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.4)',
+          backdropFilter: 'blur(4px)',
+          zIndex: 80,
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? 'auto' : 'none',
+          transition: 'opacity 0.3s ease',
+        }}
+      />
+      <div
+        style={{
+          position: 'fixed',
+          top: 24,
+          bottom: 120, // leave space for dock
+          right: open ? 24 : -400,
+          width: 340,
+          background: 'rgba(15, 15, 20, 0.7)',
+          backdropFilter: 'blur(40px)',
+          WebkitBackdropFilter: 'blur(40px)',
+          borderRadius: 32,
+          border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: '-10px 0 40px rgba(0,0,0,0.5), inset 1px 1px 0 rgba(255,255,255,0.1)',
+          zIndex: 90,
+          transition: 'right 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          padding: 24,
         }}
       >
-        ☰
-      </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <h2 style={{ margin: 0, fontSize: 18, color: '#e0e7ff', fontWeight: 700 }}>Chat History</h2>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#a5b4fc', cursor: 'pointer', fontSize: 24, lineHeight: 1 }}>×</button>
+        </div>
 
-      {/* Breadcrumb */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 18 }}>{currentPage?.icon || '🏠'}</span>
-        <div>
-          <div
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {threads.length === 0 ? (
+            <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13, textAlign: 'center', padding: 20 }}>
+              No history found. Initialize a new sequence.
+            </div>
+          ) : (
+            threads.map((t) => {
+              const active = pathname === `/chat/${t.id}`;
+              return (
+                <Link
+                  key={t.id}
+                  href={`/chat/${t.id}`}
+                  onClick={onClose}
+                  style={{
+                    padding: 16,
+                    borderRadius: 16,
+                    background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)',
+                    border: active ? '1px solid rgba(99,102,241,0.4)' : '1px solid rgba(255,255,255,0.05)',
+                    color: active ? '#c4b5fd' : 'rgba(255,255,255,0.7)',
+                    textDecoration: 'none',
+                    fontSize: 14,
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden' }}>
+                    <span style={{ marginRight: 8, opacity: active ? 1 : 0.5 }}>💬</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {t.title || 'Untitled Thread'}
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={(e) => handleDelete(e, t.id)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      color: 'rgba(239, 68, 68, 0.6)',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = '#ef4444';
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(239, 68, 68, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = 'rgba(239, 68, 68, 0.6)';
+                      (e.currentTarget as HTMLElement).style.background = 'transparent';
+                    }}
+                    title="Delete Chat"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M3 6h18"></path>
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </Link>
+              );
+            })
+          )}
+        </div>
+
+        <div style={{ marginTop: 'auto', paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <button
+            onClick={logout}
             style={{
+              width: '100%',
+              padding: 14,
+              borderRadius: 16,
+              background: 'rgba(239,68,68,0.1)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              color: '#fca5a5',
               fontWeight: 700,
-              fontSize: 15,
-              color: 'rgba(240,242,255,0.95)',
-              lineHeight: 1.2,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.2)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.background = 'rgba(239,68,68,0.1)';
             }}
           >
-            {currentPage?.label || 'Workspace'}
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(240,242,255,0.35)' }}>
-            {currentPage?.desc || 'AI Mentor'}
-          </div>
+            DISCONNECT
+          </button>
         </div>
       </div>
-
-      {/* Right side */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        {/* Status pill */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '5px 12px',
-            borderRadius: 999,
-            background: 'rgba(16,185,129,0.1)',
-            border: '1px solid rgba(16,185,129,0.2)',
-            fontSize: 12,
-            fontWeight: 600,
-            color: 'rgba(52,211,153,0.9)',
-          }}
-        >
-          <span
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: '50%',
-              background: '#10b981',
-              boxShadow: '0 0 6px #10b981',
-              animation: 'pulse-glow 2s ease-in-out infinite',
-              display: 'inline-block',
-            }}
-          />
-          AI Online
-        </div>
-
-        {/* New Chat shortcut */}
-        <Link
-          href="/chat"
-          id="header-new-chat"
-          style={{
-            padding: '7px 16px',
-            borderRadius: 10,
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15))',
-            border: '1px solid rgba(99,102,241,0.3)',
-            color: '#a5b4fc',
-            fontSize: 13,
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'linear-gradient(135deg, rgba(99,102,241,0.35), rgba(139,92,246,0.25))';
-            el.style.boxShadow = '0 4px 16px rgba(99,102,241,0.2)';
-            el.style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget as HTMLElement;
-            el.style.background = 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.15))';
-            el.style.boxShadow = 'none';
-            el.style.transform = 'translateY(0)';
-          }}
-        >
-          ✨ New Chat
-        </Link>
-      </div>
-    </header>
+    </>
   );
 }
 
-/* ─────────────────── AppShell ─────────────────── */
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const router = useRouter();
   const profile = useUserStore((s) => s.profile);
+  const hydrate = useUserStore((s) => s.hydrate);
   const { logout, loading: authLoading } = useSupabaseAuth();
   const didLogout = useRef(false);
 
-  // Build a user object compatible with Sidebar's expectations
-  const user = profile
-    ? { name: profile.name, email: profile.email }
-    : null;
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+
+  const user = profile ? { name: profile.name, email: profile.email } : null;
 
   const handleLogout = async () => {
     if (authLoading || didLogout.current) return;
@@ -771,96 +498,75 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        display: 'flex',
+        width: '100vw',
         height: '100vh',
-        background: '#0a0b0f',
+        background: '#050508',
         overflow: 'hidden',
+        position: 'relative',
+        fontFamily: "'Inter', sans-serif"
       }}
     >
-      {/* Desktop permanent sidebar */}
-      <Sidebar
-        collapsed={collapsed}
-        onToggle={() => setCollapsed(!collapsed)}
-        user={user}
-        logout={handleLogout}
-      />
-
-      {/* Mobile overlay sidebar */}
-      {mobileMenuOpen && (
-        <>
-          <div
-            onClick={() => setMobileMenuOpen(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0,0,0,0.6)',
-              zIndex: 100,
-              animation: 'fadeIn 0.2s ease-out',
-            }}
-          />
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              height: '100vh',
-              zIndex: 110,
-              animation: 'slideInLeft 0.25s ease-out',
-            }}
-          >
-            <Sidebar
-              collapsed={false}
-              onToggle={() => setMobileMenuOpen(false)}
-              user={user}
-              logout={handleLogout}
-            />
-          </div>
-        </>
-      )}
-
-      {/* Main content */}
+      {/* Immersive Dark Mesh Background */}
       <div
         style={{
-          flex: 1,
+          position: 'absolute',
+          inset: 0,
+          background: `
+            radial-gradient(circle at 15% 50%, rgba(99, 102, 241, 0.15), transparent 50%),
+            radial-gradient(circle at 85% 30%, rgba(139, 92, 246, 0.15), transparent 50%),
+            radial-gradient(circle at 50% 80%, rgba(45, 212, 191, 0.1), transparent 50%)
+          `,
+          filter: 'blur(60px)',
+          zIndex: 0,
+          animation: 'pulse-glow 10s alternate infinite ease-in-out',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+          opacity: 0.3,
+          zIndex: 0,
+        }}
+      />
+
+      <TopHUD user={user} onToggleDrawer={() => setDrawerOpen(!drawerOpen)} drawerOpen={drawerOpen} />
+      
+      <RightDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} logout={handleLogout} />
+
+      <BottomDock />
+
+      {/* Main Stage */}
+      <main
+        style={{
+          position: 'absolute',
+          top: 112, // Below TopHUD
+          bottom: 112, // Above Dock
+          left: 24,
+          right: 24,
+          zIndex: 10,
           display: 'flex',
           flexDirection: 'column',
+          borderRadius: 32,
           overflow: 'hidden',
-          minWidth: 0,
         }}
       >
-        <WorkspaceHeader
-          onMenuClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          user={user}
-        />
+        {children}
+      </main>
 
-        {/* Page content */}
-        <main
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            overflowX: 'hidden',
-            padding: '20px',
-            background: 'linear-gradient(180deg, #0a0b0f 0%, #0d0e14 100%)',
-            position: 'relative',
-          }}
-        >
-          {/* Glassmorphism background effects */}
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: -1,
-              backgroundImage: `
-                radial-gradient(circle at 25% 25%, rgba(99,102,241,0.1) 0%, transparent 50%),
-                radial-gradient(circle at 75% 75%, rgba(139,92,246,0.08) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(165,180,252,0.05) 0%, transparent 60%)
-              `,
-              pointerEvents: 'none',
-            }}
-          />
-          {children}
-        </main>
-      </div>
+      <style>{`
+        @keyframes pulse-glow {
+          0% { opacity: 0.8; transform: scale(1); }
+          50% { opacity: 1; transform: scale(1.05); }
+          100% { opacity: 0.8; transform: scale(1); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

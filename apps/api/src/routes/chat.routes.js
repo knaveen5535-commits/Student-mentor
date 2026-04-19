@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { chatController, getThreadsController, getThreadDetailsController } from '../controllers/chat.controller.js';
+import { chatController, getThreadsController, getThreadDetailsController, deleteThreadController } from '../controllers/chat.controller.js';
 import { requireAuth } from '../middleware/auth.middleware.js';
 
 export const chatRoutes = Router();
@@ -12,3 +12,7 @@ chatRoutes.get('/threads', requireAuth, getThreadsController);
 
 // GET: Get a specific thread with all its messages
 chatRoutes.get('/threads/:threadId', requireAuth, getThreadDetailsController);
+
+// DELETE: Delete a specific thread
+chatRoutes.delete('/threads/:threadId', requireAuth, deleteThreadController);
+

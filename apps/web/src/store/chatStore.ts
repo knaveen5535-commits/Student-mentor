@@ -22,6 +22,7 @@ type ChatState = {
   addMessage: (threadId: string, msg: Omit<ChatMessage, 'id' | 'createdAt'>) => void;
   setTitleFromFirstMessage: (threadId: string) => void;
   updateThreadId: (oldId: string, newId: string) => void;
+  deleteThread: (threadId: string) => void;
 };
 
 function uid() {
@@ -72,6 +73,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
   updateThreadId: (oldId, newId) => {
     set((s) => ({
       threads: s.threads.map((t) => (t.id === oldId ? { ...t, id: newId } : t))
+    }));
+  },
+
+  deleteThread: (threadId) => {
+    set((s) => ({
+      threads: s.threads.filter((t) => t.id !== threadId)
     }));
   }
 }));

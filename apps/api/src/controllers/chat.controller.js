@@ -1,4 +1,4 @@
-import { processChatMessage, getUserThreads, getThreadDetails } from '../services/chat.service.js';
+import { processChatMessage, getUserThreads, getThreadDetails, deleteThread } from '../services/chat.service.js';
 
 export async function chatController(req, res, next) {
   try {
@@ -78,6 +78,26 @@ export async function getThreadDetailsController(req, res, next) {
 
     const thread = await getThreadDetails(userEmail, threadId);
     res.json({ thread });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function deleteThreadController(req, res, next) {
+  try {
+    const { threadId } = req.params;
+    const userEmail = req.user?.email;
+
+    if (!userEmail) {
+      return res.status(401).json({ error: 'User email not found in request' });
+    }
+
+    if (!threadId) {
+      return res.status(400).json({ error: 'threadId is required' });
+    }
+
+    await deleteThread(userEmail, threadId);
+    res.json({ success: true, message: 'Thread deleted successfully' });
   } catch (err) {
     next(err);
   }

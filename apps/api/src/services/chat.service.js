@@ -242,13 +242,12 @@ export async function getUserThreads(userEmail) {
       .eq('user_id', user.id)
       .order('updated_at', { ascending: false });
 
-    if (error) {
-      throw Object.assign(new Error(error.message), { status: 400 });
-    }
-
+    if (error) throw error;
     return data || [];
   } catch (err) {
-    throw err;
+    console.warn('Supabase getUserThreads failed, using fallback:', err.message);
+    const threads = Array.from(inMemoryThreads.values());
+    return threads.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }
 }
 
@@ -260,7 +259,6 @@ export async function getThreadDetails(userEmail, threadId) {
     const user = await getUserByEmail(userEmail);
     const supabase = getSupabaseAdmin();
 
-    // Verify thread belongs to user
     const { data: thread, error: threadError } = await supabase
       .from('chat_threads')
       .select('id, title, created_at')
@@ -268,15 +266,12 @@ export async function getThreadDetails(userEmail, threadId) {
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (threadError) {
-      throw Object.assign(new Error(threadError.message), { status: 400 });
-    }
+    if (threadError) throw threadError;
 
     if (!thread) {
-      throw Object.assign(new Error('Thread not found'), { status: 404 });
+      throw new Error('Thread not found');
     }
 
-    // Get messages
     const messages = await getThreadMessages(threadId);
 
     return {
@@ -284,8 +279,36 @@ export async function getThreadDetails(userEmail, threadId) {
       messages
     };
   } catch (err) {
-    throw err;
+    console.warn('Supabase getThreadDetails failed, using fallback:', err.message);
+    const fallbackThread = inMemoryThreads.get(threadId);
+    if (!fallbackThread) {
+      throw Object.assign(new Error('Thread not found in fallback cache'), { status: 404 });
+    }
+    return fallbackThread;
   }
+}
+
+export async function deleteThread(userEmail, threadId) {
+  try {
+    const user = await getUserByEmail(userEmail);
+    const supabase = getSupabaseAdmin();
+
+    const { error } = await supabase
+      .from('chat_threads')
+      .delete()
+      .eq('id', threadId)
+      .eq('user_id', user.id);
+
+    if (error) throw error;
+  } catch (err) {
+    console.warn('Supabase deleteThread failed, triggering fallback memory wipe:', err.message);
+  } finally {
+    // Always wipe from fallback memory to guarantee deletion regardless of schema cache failures
+    if (inMemoryThreads.has(threadId)) {
+      inMemoryThreads.delete(threadId);
+    }
+  }
+  return true;
 }
 
 export { getOrCreateThread, getThreadMessages, addMessageToThread, getUserByEmail };

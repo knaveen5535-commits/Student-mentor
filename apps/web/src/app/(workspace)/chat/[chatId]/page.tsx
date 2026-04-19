@@ -50,9 +50,11 @@ export default function ChatThreadPage() {
       style={{
         display: 'flex',
         gap: 16,
-        height: 'calc(100vh - 100px)',
-        alignItems: 'flex-start',
+        height: '100%',
+        width: '100%',
+        alignItems: 'stretch',
         animation: 'fadeIn 0.3s ease-out',
+        minHeight: 0,
       }}
     >
       {/* Main chat area */}
@@ -62,6 +64,7 @@ export default function ChatThreadPage() {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
+          minHeight: 0,
           gap: 0,
           minWidth: 0,
           borderRadius: 16,
@@ -100,9 +103,10 @@ export default function ChatThreadPage() {
               fontSize: 18,
               boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
               flexShrink: 0,
+              overflow: 'hidden'
             }}
           >
-            🧠
+            <img src="/assets/ai_logo.png" alt="AI Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div>
             <div
@@ -181,13 +185,18 @@ export default function ChatThreadPage() {
               <div style={{ textAlign: 'center' }}>
                 <div
                   style={{
-                    fontSize: 56,
+                    width: 72,
+                    height: 72,
+                    borderRadius: 24,
                     marginBottom: 16,
                     animation: 'float 4s ease-in-out infinite',
                     display: 'inline-block',
+                    overflow: 'hidden',
+                    boxShadow: '0 10px 30px rgba(99,102,241,0.5)',
+                    border: '2px solid rgba(165,180,252,0.4)',
                   }}
                 >
-                  🧠
+                  <img src="/assets/ai_logo.png" alt="AI Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <h2
                   style={{
@@ -290,10 +299,10 @@ export default function ChatThreadPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 14,
+                  overflow: 'hidden'
                 }}
               >
-                🧠
+                <img src="/assets/ai_logo.png" alt="AI Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               <div style={{ display: 'flex', gap: 4 }}>
                 {[0, 0.15, 0.3].map((delay, i) => (

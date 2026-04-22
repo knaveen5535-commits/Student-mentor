@@ -39,7 +39,12 @@ Create `apps/api/.env` based on `apps/api/.env.example`:
 
 ## Supabase setup
 
-Run the SQL in [apps/api/supabase/setup.sql](apps/api/supabase/setup.sql) in the Supabase SQL editor.
+Run the SQL in [apps/api/supabase/setup.sql](apps/api/supabase/setup.sql) in the Supabase SQL editor.\
+
+## 📄 License
+
+This project is licensed under the Apache License 2.0.  
+See the [LICENSE](LICENSE) file for more details.
 
 ## Run
 

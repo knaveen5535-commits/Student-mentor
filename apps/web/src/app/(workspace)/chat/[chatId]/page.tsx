@@ -226,7 +226,7 @@ export default function ChatThreadPage() {
                 {SUGGESTED_PROMPTS.map((p, i) => (
                   <button
                     key={i}
-                    onClick={() => sendMessage(p.text)}
+                    onClick={() => sendMessage(p.text).catch(console.error)}
                     style={{
                       padding: '14px 16px',
                       borderRadius: 12,

@@ -84,9 +84,9 @@ export function ChatInput({ onSend, disabled }: Props) {
     if (!file) return;
     setError(null);
 
-    // Limit attachment size approx (e.g. 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File is too large. Maximum size is 5MB.');
+    // Limit attachment size approx (e.g. 20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      setError('File is too large. Maximum size is 20MB.');
       return;
     }
 

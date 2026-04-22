@@ -15,6 +15,7 @@ import { authRoutes } from './routes/auth.routes.js';
 import { aiRoutes } from './routes/ai.routes.js';
 import tutorialsRoutes from './routes/tutorials.routes.js';
 import setupRoutes from './routes/setup.routes.js';
+import { threeRoutes } from './routes/3d.routes.js';
 import { uploadDir } from './services/file.service.js';
 import { getSupabaseAdmin } from './services/supabase.service.js';
 
@@ -28,7 +29,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Session configuration
 app.use(
@@ -107,6 +108,7 @@ app.use('/uploads', uploadRoutes);
 app.use('/profile', profileRoutes);
 app.use('/tutorials', tutorialsRoutes);
 app.use('/setup', setupRoutes);
+app.use('/api/3d', threeRoutes);
 
 app.use('/uploads', express.static(uploadDir));
 

@@ -2,7 +2,6 @@ import { processChatMessage, getUserThreads, getThreadDetails, deleteThread } fr
 
 export async function chatController(req, res, next) {
   try {
-    console.log('Chat request body:', req.body);
     const { messages, threadId, message } = req.body || {};
     const userEmail = req.user?.email;
 
@@ -25,7 +24,7 @@ export async function chatController(req, res, next) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    console.log('Incoming message:', userMessage);
+    // Process chat processing with the backend services
 
     const result = await processChatMessage({
       userEmail,
@@ -36,14 +35,30 @@ export async function chatController(req, res, next) {
     res.json({ message: result.message, threadId: result.threadId });
   } catch (err) {
     console.error('FULL BACKEND ERROR:', err);
-    const status = err?.status || 500;
+    let status = err?.status || 500;
+
+    if (status === 503 || err?.message?.includes('503') || err?.message?.includes('high demand')) {
+      status = 503;
+      return res.status(status).json({
+        success: false,
+        error: 'The AI model is currently busy due to high demand. Please try again shortly.',
+        details: null
+      });
+    }
+
+    if (status === 429 || err?.message?.includes('429') || err?.message?.includes('quota')) {
+      status = 429;
+      return res.status(status).json({
+        success: false,
+        error: 'AI Model quota exceeded. Please wait a minute before sending more messages.',
+        details: null
+      });
+    }
+
     res.status(status).json({
-      error: err?.message || 'Unknown error',
-      details: {
-        name: err?.name,
-        message: err?.message,
-        stack: process.env.NODE_ENV === 'production' ? undefined : err?.stack
-      }
+      success: false,
+      error: err?.message || 'An internal error occurred while processing your request',
+      details: process.env.NODE_ENV === 'production' ? null : { name: err?.name, message: err?.message }
     });
   }
 }

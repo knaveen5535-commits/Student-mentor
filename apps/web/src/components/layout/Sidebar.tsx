@@ -96,6 +96,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div style={{ padding: '20px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <SidebarLink href="/chat" label="Chat" icon="💬" onClick={onClose} />
           <SidebarLink href="/projects" label="Projects" icon="📁" onClick={onClose} />
+          <SidebarLink href="/3d-learning" label="3D Learning" icon="🔬" onClick={onClose} />
           <SidebarLink href="/uploads" label="Uploads" icon="📤" onClick={onClose} />
           <SidebarLink href="/tutorials" label="Tutorials" icon="🎓" onClick={onClose} />
           <SidebarLink href="/profile" label="Profile" icon="👤" onClick={onClose} />

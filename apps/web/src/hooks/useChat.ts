@@ -37,9 +37,23 @@ export function useChat(threadId: string) {
       if (data.threadId && data.threadId !== threadId) {
         updateThreadId(threadId, data.threadId);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Chat send failed:', err);
-      throw err;
+
+      // Detect 503 error
+      const is503 = err?.message?.includes('503') || err?.status === 503 || err?.message?.includes('high demand') || err?.message?.includes('busy');
+      const is429 = err?.status === 429 || err?.message?.includes('429') || err?.message?.includes('quota');
+
+      let errorMessage = err?.message || 'An error occurred. Please try again.';
+      if (is503) errorMessage = 'Server busy, please try again';
+      if (is429) errorMessage = 'AI Model quota exceeded. Please wait a minute before sending more messages.';
+
+      // Show user friendly message (using alert as a simple toast alternative)
+      if (typeof window !== 'undefined') {
+        alert(errorMessage);
+      }
+
+      // Do not re-throw error to prevent Unhandled Promise Rejection UI crash
     } finally {
       setLoading(false);
     }

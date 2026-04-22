@@ -39,15 +39,38 @@ export async function apiFetch<T>(path: string, options: ApiOptions = {}): Promi
   }
 
   if (!res.ok) {
-    console.error('API ERROR FULL:', {
+    const errorData = {
       path,
       status: res.status,
       statusText: res.statusText,
       rawBody,
       parsedBody,
       headers: Object.fromEntries(res.headers.entries())
-    });
-    const message = parsedBody?.message || parsedBody?.error || rawBody || res.statusText || 'API failed';
+    };
+    
+    // Stringify the error object so it prints fully in the Next.js console interceptor
+    console.error('API ERROR FULL:\n' + JSON.stringify(errorData, null, 2));
+
+    // Extract message intelligently
+    let message = 'API failed';
+    if (parsedBody) {
+      if (typeof parsedBody.message === 'string') {
+        message = parsedBody.message;
+      } else if (parsedBody.error) {
+        if (typeof parsedBody.error === 'string') {
+          message = parsedBody.error;
+        } else if (typeof parsedBody.error.message === 'string') {
+          message = parsedBody.error.message;
+        } else {
+          message = JSON.stringify(parsedBody.error);
+        }
+      }
+    } else if (rawBody) {
+      message = rawBody;
+    } else if (res.statusText) {
+      message = res.statusText;
+    }
+
     throw new Error(message);
   }
 

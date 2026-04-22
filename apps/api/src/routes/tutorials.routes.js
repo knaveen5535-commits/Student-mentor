@@ -1,5 +1,6 @@
 import express from 'express';
 import { searchTutorials, getTutorialsByCategory, getTutorialCategories } from '../services/tutorials.service.js';
+import { searchYouTubeVideos } from '../services/youtube.service.js';
 
 const router = express.Router();
 
@@ -84,6 +85,31 @@ router.get('/categories', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to get tutorial categories'
+    });
+  }
+});
+
+/**
+ * Search YouTube educational videos natively
+ * GET /api/tutorials/youtube/search?q=physics
+ */
+router.get('/youtube/search', async (req, res) => {
+  try {
+    const { q, limit } = req.query;
+    const maxResults = limit ? parseInt(limit, 10) : 5;
+    
+    const videos = await searchYouTubeVideos({ query: q || '', maxResults });
+    
+    res.json({
+      success: true,
+      count: videos.length,
+      videos
+    });
+  } catch (err) {
+    console.error('YouTube search route error:', err);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to search YouTube videos'
     });
   }
 });

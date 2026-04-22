@@ -89,7 +89,66 @@ export function ChatMessage({ msg }: { msg: Msg }) {
             fontSize: 14,
           }}
         >
-          {msg.content}
+          {(() => {
+            try {
+              const parsed = JSON.parse(msg.content);
+              if (parsed.text !== undefined || parsed.attachments !== undefined) {
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {parsed.text && <div>{parsed.text}</div>}
+                    {parsed.attachments && Array.isArray(parsed.attachments) && parsed.attachments.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: parsed.text ? 4 : 0 }}>
+                        {parsed.attachments.map((att: any, idx: number) => {
+                          const isImage = att.mimeType && att.mimeType.startsWith('image/');
+                          const src = `data:${att.mimeType || 'application/octet-stream'};base64,${att.data}`;
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                borderRadius: 8,
+                                overflow: 'hidden',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.15)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: isImage ? 0 : '8px 12px',
+                                maxWidth: '100%'
+                              }}
+                            >
+                              {isImage ? (
+                                <img
+                                  src={src}
+                                  alt="attachment"
+                                  style={{
+                                    maxWidth: 240,
+                                    maxHeight: 240,
+                                    objectFit: 'contain',
+                                    borderRadius: 8
+                                  }}
+                                />
+                              ) : (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>
+                                  <span style={{ fontSize: 24 }}>📄</span>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontWeight: 500 }}>Document Attached</span>
+                                    <span style={{ fontSize: 11, opacity: 0.7 }}>File format: {att.mimeType?.split('/')[1] || 'Unknown'}</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return msg.content;
+            } catch {
+              return msg.content;
+            }
+          })()}
         </div>
 
         {/* Timestamp */}

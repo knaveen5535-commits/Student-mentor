@@ -14,7 +14,7 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     refresh('');
-    history().then(setHistoryItems).catch(() => {});
+    history().then(setHistoryItems).catch(() => { });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const filtered = useMemo(() => projects, [projects]);

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { Session, AuthError } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, getSupabaseConfigErrorMessage } from '../lib/supabase';
 import { useUserStore } from '../store/userStore';
 
 export interface UserProfile {
@@ -19,11 +19,10 @@ export interface AuthState {
   user: UserProfile | null;
   session: Session | null;
   loading: boolean;
-  error: AuthError | null;
+  error: AuthError | Error | null;
 }
 
 const AUTH_STORAGE_KEY = 'ai_workspace_user_profile';
-const SESSION_STORAGE_KEY = 'ai_workspace_session';
 
 /**
  * useSupabaseAuth Hook
@@ -106,6 +105,22 @@ export function useSupabaseAuth() {
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
+      if (!supabase) {
+        const storedUser = loadStoredUser();
+        setState({
+          user: storedUser,
+          session: null,
+          loading: false,
+          error: null
+        });
+        if (storedUser) {
+          syncUserStore(storedUser);
+        } else {
+          syncUserStore(null);
+        }
+        return;
+      }
+
       // Get current session from Supabase
       const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -155,6 +170,10 @@ export function useSupabaseAuth() {
   useEffect(() => {
     // Initialize first
     initializeAuth();
+
+    if (!supabase) {
+      return;
+    }
 
     // Listen for auth changes
     const {
@@ -209,6 +228,11 @@ export function useSupabaseAuth() {
    * Login with Google using Supabase
    */
   const loginWithGoogle = useCallback(async () => {
+    if (!supabase) {
+      setState(prev => ({ ...prev, loading: false, error: new Error(getSupabaseConfigErrorMessage()) }));
+      return false;
+    }
+
     try {
       setState(prev => ({ ...prev, loading: true, error: null }));
 
@@ -241,6 +265,13 @@ export function useSupabaseAuth() {
    * Logout user
    */
   const logout = useCallback(async () => {
+    if (!supabase) {
+      setState(prev => ({ ...prev, loading: false, error: null }));
+      saveUserToStorage(null);
+      syncUserStore(null);
+      return true;
+    }
+
     try {
       setState(prev => ({ ...prev, loading: true }));
 
@@ -265,7 +296,7 @@ export function useSupabaseAuth() {
       setState(prev => ({ ...prev, loading: false }));
       return false;
     }
-  }, [saveUserToStorage]);
+  }, [saveUserToStorage, syncUserStore]);
 
   /**
    * Check if user is authenticated

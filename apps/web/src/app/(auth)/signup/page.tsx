@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSupabaseAuth } from '../../../hooks/useSupabaseAuth';
 import { useUserStore } from '../../../store/userStore';
-import { supabase } from '../../../lib/supabase';
+import { supabase, getSupabaseConfigErrorMessage } from '../../../lib/supabase';
 
 export default function SignupPage() {
   const router = useRouter();
@@ -70,6 +70,10 @@ export default function SignupPage() {
 
   const handleSubmit = async () => {
     if (loading) return;
+    if (!supabase) {
+      setError(getSupabaseConfigErrorMessage());
+      return;
+    }
     const now = Date.now();
     if (now - lastSubmitRef.current < 1500) {
       setError('Please wait a moment before trying again.');

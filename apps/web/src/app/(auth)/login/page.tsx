@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSupabaseAuth } from '../../../hooks/useSupabaseAuth';
-import { supabase } from '../../../lib/supabase';
+import { supabase, getSupabaseConfigErrorMessage } from '../../../lib/supabase';
 
 /* ── tiny particle helper ────────────────────── */
 type Particle = {
@@ -103,6 +103,10 @@ export default function LoginPage() {
 
   const handleSubmit = async () => {
     setError(null);
+    if (!supabase) {
+      setError(getSupabaseConfigErrorMessage());
+      return;
+    }
     if (!canSubmit) {
       if (!emailValid) setError('Please enter your email');
       else if (!passwordValid) setError('Please enter a password');

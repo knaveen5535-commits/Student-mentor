@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../../lib/supabase';
+import { supabase, getSupabaseConfigErrorMessage } from '../../../../lib/supabase';
 import { useUserStore } from '../../../../store/userStore';
+
+export const dynamic = 'force-dynamic';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -15,21 +17,27 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        console.log('🔄 Processing OAuth callback...');
+        if (!supabase) {
+          setError(getSupabaseConfigErrorMessage());
+          setLoading(false);
+          return;
+        }
+
+        console.log('Processing OAuth callback...');
 
         // Get the current session from Supabase
         // This will also trigger the onAuthStateChange listener
         const { data, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error('❌ Session error:', sessionError);
+          console.error('Session error:', sessionError);
           setError('Failed to get session');
           setLoading(false);
           return;
         }
 
         if (data.session) {
-          console.log('✅ Session established, redirecting to dashboard...');
+          console.log('Session established, redirecting to dashboard...');
           const sessionUser = data.session.user;
           login({
             name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || undefined,
@@ -44,7 +52,7 @@ export default function AuthCallbackPage() {
             router.push('/chat');
           }
         } else {
-          console.error('❌ No session found after callback');
+          console.error('No session found after callback');
           setError('No session found. Please try logging in again.');
           setLoading(false);
           // Redirect to login after a delay
@@ -56,7 +64,7 @@ export default function AuthCallbackPage() {
           }, 2000);
         }
       } catch (err) {
-        console.error('❌ Callback error:', err);
+        console.error('Callback error:', err);
         setError(err instanceof Error ? err.message : 'Something went wrong');
         setLoading(false);
       }

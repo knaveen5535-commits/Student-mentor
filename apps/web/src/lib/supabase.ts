@@ -1,31 +1,36 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-// Get env variables from Next.js
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    '❌ Supabase configuration is missing. Please check your environment variables:',
-    {
-      hasUrl: !!supabaseUrl,
-      hasAnonKey: !!supabaseAnonKey
-    }
-  );
+export const supabaseEnvStatus = {
+  hasUrl: Boolean(supabaseUrl),
+  hasAnonKey: Boolean(supabaseAnonKey)
+};
+
+export const isSupabaseConfigured = supabaseEnvStatus.hasUrl && supabaseEnvStatus.hasAnonKey;
+
+export function getSupabaseConfigErrorMessage(): string {
+  return 'Supabase configuration is missing. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.';
+}
+
+if (!isSupabaseConfigured) {
+  console.error(getSupabaseConfigErrorMessage(), supabaseEnvStatus);
 }
 
 /**
- * Supabase client instance
- * This client is used for all Supabase operations
- * including authentication, database queries, and file uploads
+ * Build-safe Supabase client.
+ * Returns null when required env variables are missing.
  */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: typeof window !== 'undefined' ? window.localStorage : undefined
-  }
-});
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined
+      }
+    })
+  : null;
 
 export default supabase;

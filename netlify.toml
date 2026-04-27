@@ -1,0 +1,13 @@
+# Netlify config (repo root). This is the file Netlify auto-detects.
+
+[build]
+  base = "apps/web"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_ENV = "production"
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
